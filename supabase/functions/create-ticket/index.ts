@@ -46,16 +46,21 @@ Deno.serve(async (req) => {
       .single();
 
     let nextNumber: number;
+    
+    // Starting numbers: Normal starts at 500, Preferential starts at 0
+    const startingNumber = ticket_type === 'preferential' ? 0 : 500;
 
     if (!existingCounter) {
-      // Create new counter for today
+      // Create new counter for today with appropriate starting number
+      nextNumber = startingNumber;
+      
       const { data: newCounter, error: createError } = await supabaseAdmin
         .from('ticket_counters')
         .insert({
           unit_id,
           ticket_type,
           counter_date: today,
-          last_number: 1,
+          last_number: nextNumber,
         })
         .select()
         .single();
@@ -67,8 +72,6 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      nextNumber = 1;
     } else {
       // Increment the counter
       nextNumber = existingCounter.last_number + 1;
