@@ -20,8 +20,16 @@ import {
   Clock,
   RefreshCw,
   Shield,
-  ExternalLink
+  ExternalLink,
+  Monitor
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
@@ -31,13 +39,17 @@ import type { Database } from '@/integrations/supabase/types';
 type Counter = Database['public']['Tables']['counters']['Row'];
 type Ticket = Database['public']['Tables']['tickets']['Row'];
 
+const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading, isAdmin, signOut } = useAuth();
   const [counter, setCounter] = useState<Counter | null>(null);
+  const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
   const { 
     tickets, 
@@ -61,53 +73,94 @@ export default function Dashboard() {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch or create counter for the attendant
+  // Fetch available counters and check if user already has one assigned
   useEffect(() => {
-    const fetchCounter = async () => {
-      if (!profile?.unit_id || !user?.id) return;
+    const fetchCounters = async () => {
+      if (!user?.id) return;
 
-      // First try to find an existing counter assigned to this user
-      const { data: existingCounter, error: fetchError } = await supabase
+      const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+
+      // Check if user already has a counter assigned
+      const { data: myCounter } = await supabase
         .from('counters')
         .select('*')
         .eq('current_attendant_id', user.id)
-        .eq('unit_id', profile.unit_id)
         .eq('is_active', true)
         .single();
 
-      if (existingCounter) {
-        setCounter(existingCounter);
+      if (myCounter) {
+        setCounter(myCounter);
+        setIsSelectingCounter(false);
         return;
       }
 
-      // If no assigned counter, find an available one
-      const { data: availableCounter, error: availableError } = await supabase
+      // Fetch all active counters for this unit
+      const { data: counters } = await supabase
         .from('counters')
         .select('*')
-        .eq('unit_id', profile.unit_id)
+        .eq('unit_id', unitId)
         .eq('is_active', true)
-        .is('current_attendant_id', null)
-        .order('number', { ascending: true })
-        .limit(1)
-        .single();
+        .order('number', { ascending: true });
 
-      if (availableCounter) {
-        // Assign this counter to the current user
-        const { data: updatedCounter, error: updateError } = await supabase
-          .from('counters')
-          .update({ current_attendant_id: user.id })
-          .eq('id', availableCounter.id)
-          .select()
-          .single();
-
-        if (updatedCounter) {
-          setCounter(updatedCounter);
-        }
+      if (counters) {
+        // Filter to only available counters (no attendant assigned)
+        const available = counters.filter(c => !c.current_attendant_id);
+        setAvailableCounters(available);
+        setIsSelectingCounter(true);
       }
     };
 
-    fetchCounter();
+    fetchCounters();
   }, [profile?.unit_id, user?.id]);
+
+  const handleSelectCounter = async (counterId: string) => {
+    if (!user?.id) return;
+    setIsProcessing(true);
+
+    // Assign counter to this user
+    const { data: updatedCounter, error } = await supabase
+      .from('counters')
+      .update({ current_attendant_id: user.id })
+      .eq('id', counterId)
+      .select()
+      .single();
+
+    if (updatedCounter) {
+      setCounter(updatedCounter);
+      setIsSelectingCounter(false);
+    }
+
+    setIsProcessing(false);
+  };
+
+  const handleReleaseCounter = async () => {
+    if (!counter) return;
+    setIsProcessing(true);
+
+    await supabase
+      .from('counters')
+      .update({ current_attendant_id: null })
+      .eq('id', counter.id);
+
+    setCounter(null);
+    setIsSelectingCounter(true);
+    
+    // Refetch available counters
+    const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+    const { data: counters } = await supabase
+      .from('counters')
+      .select('*')
+      .eq('unit_id', unitId)
+      .eq('is_active', true)
+      .is('current_attendant_id', null)
+      .order('number', { ascending: true });
+
+    if (counters) {
+      setAvailableCounters(counters);
+    }
+
+    setIsProcessing(false);
+  };
 
   // Track current ticket (called or in_service by this attendant)
   useEffect(() => {
@@ -221,9 +274,21 @@ export default function Dashboard() {
                 Painel do Atendente
               </h1>
               {counter && (
-                <Badge variant="secondary" className="text-lg px-3 py-1">
-                  Guichê {counter.number}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-lg px-3 py-1">
+                    Guichê {counter.number}
+                  </Badge>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleReleaseCounter}
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={isProcessing || currentTicket !== null}
+                    title="Trocar guichê"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-4">
@@ -252,7 +317,40 @@ export default function Dashboard() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {!counter ? (
+        {isSelectingCounter ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Selecione seu Guichê
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {availableCounters.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">
+                  Nenhum guichê disponível no momento. Aguarde ou contate o administrador.
+                </p>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {availableCounters.map((c) => (
+                    <Button
+                      key={c.id}
+                      variant="outline"
+                      className="h-20 flex flex-col gap-1"
+                      onClick={() => handleSelectCounter(c.id)}
+                      disabled={isProcessing}
+                    >
+                      <span className="text-2xl font-bold">{c.number}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {c.name || `Guichê ${c.number}`}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : !counter ? (
           <Card className="border-destructive">
             <CardContent className="pt-6">
               <p className="text-center text-destructive">
