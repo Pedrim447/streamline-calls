@@ -19,7 +19,8 @@ import {
   Users,
   Clock,
   RefreshCw,
-  Shield
+  Shield,
+  ExternalLink
 } from 'lucide-react';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
@@ -182,6 +183,19 @@ export default function Dashboard() {
     navigate('/auth');
   };
 
+  const openWidgetPopup = () => {
+    const width = 360;
+    const height = 500;
+    const left = window.screen.width - width - 20;
+    const top = 20;
+    
+    window.open(
+      '/widget',
+      'FilaFacilWidget',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,status=no,toolbar=no,menubar=no,location=no`
+    );
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -216,6 +230,10 @@ export default function Dashboard() {
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name}
               </span>
+              <Button variant="outline" size="sm" onClick={openWidgetPopup}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Widget
+              </Button>
               {isAdmin && (
                 <Link to="/admin">
                   <Button variant="outline" size="sm">

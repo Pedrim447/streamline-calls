@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import PublicPanel from "./pages/PublicPanel";
+import Widget from "./pages/Widget";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/painel" element={<PublicPanel />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/widget" element={<Widget />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
