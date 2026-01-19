@@ -64,7 +64,7 @@ export default function Dashboard() {
     realtime: true 
   });
 
-  const { callTicket, isSpeaking } = useVoice();
+  const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -188,7 +188,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     
     await repeatCall(currentTicket.id);
-    callTicket(currentTicket.display_code, counter.number);
+    // Use soft voice and gentle chime for repeat calls
+    repeatCallSoft(currentTicket.display_code, counter.number);
     
     setIsProcessing(false);
   };

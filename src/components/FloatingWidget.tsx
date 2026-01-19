@@ -53,7 +53,7 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     realtime: true 
   });
 
-  const { callTicket, isSpeaking } = useVoice();
+  const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
 
   // Fetch counter for the attendant
   useEffect(() => {
@@ -160,7 +160,8 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     setIsProcessing(true);
     
     await repeatCall(currentTicket.id);
-    callTicket(currentTicket.display_code, counter.number);
+    // Use soft voice and gentle chime for repeat calls
+    repeatCallSoft(currentTicket.display_code, counter.number);
     
     setIsProcessing(false);
   };

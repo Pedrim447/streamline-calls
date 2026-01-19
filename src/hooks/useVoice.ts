@@ -64,7 +64,7 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const speak = useCallback((ticketCode: string, counterNumber: number | string) => {
+  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false) => {
     if (!voiceSettings.enabled || !window.speechSynthesis) {
       return;
     }
@@ -96,9 +96,17 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     // Create utterance
     const utterance = new SpeechSynthesisUtterance(message);
     utterance.lang = voiceSettings.lang;
-    utterance.rate = voiceSettings.speed;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+    
+    // Softer voice for repeat calls: slower, lower pitch
+    if (isSoft) {
+      utterance.rate = voiceSettings.speed * 0.85; // 15% slower
+      utterance.pitch = 0.9; // Slightly lower pitch
+      utterance.volume = 0.8; // Slightly quieter
+    } else {
+      utterance.rate = voiceSettings.speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+    }
 
     // Try to find a Portuguese voice
     const voices = window.speechSynthesis.getVoices();
@@ -120,8 +128,8 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     setIsSpeaking(false);
   }, []);
 
+  // Original alert sound - more attention-grabbing
   const playAlertSound = useCallback(() => {
-    // Create a simple beep sound
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -141,23 +149,63 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     oscillator.stop(audioContext.currentTime + 0.5);
   }, []);
 
+  // Soft chime sound - gentle and calming for repeat calls
+  const playSoftChime = useCallback(() => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a gentle two-note chime
+    const playNote = (frequency: number, startTime: number, duration: number, volume: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
+      
+      // Gentle envelope
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime + startTime);
+      gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + startTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + startTime + duration);
+
+      oscillator.start(audioContext.currentTime + startTime);
+      oscillator.stop(audioContext.currentTime + startTime + duration);
+    };
+
+    // Play soft chime notes (C5 and E5 - pleasant interval)
+    playNote(523.25, 0, 0.6, 0.15);      // C5 - quiet
+    playNote(659.25, 0.15, 0.7, 0.12);   // E5 - even quieter
+  }, []);
+
   const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true) => {
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber);
+        speak(ticketCode, counterNumber, false);
       }, 600);
     } else {
-      speak(ticketCode, counterNumber);
+      speak(ticketCode, counterNumber, false);
     }
   }, [speak, playAlertSound]);
+
+  // Soft repeat call with gentle chime and calmer voice
+  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string) => {
+    playSoftChime();
+    // Small delay before soft voice
+    setTimeout(() => {
+      speak(ticketCode, counterNumber, true);
+    }, 500);
+  }, [speak, playSoftChime]);
 
   return {
     speak,
     stop,
     callTicket,
+    repeatCallSoft,
     playAlertSound,
+    playSoftChime,
     isSpeaking,
   };
 }
