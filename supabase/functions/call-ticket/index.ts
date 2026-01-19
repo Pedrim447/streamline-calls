@@ -74,15 +74,105 @@ Deno.serve(async (req) => {
         .limit(1)
         .single();
 
+      let ticketToCall = nextTicket;
+
+      // If no ticket in queue, create one automatically (Normal type by default)
       if (findError || !nextTicket) {
-        console.log('No tickets in queue');
+        console.log('No tickets in queue, creating new one automatically');
+        
+        const today = new Date().toISOString().split('T')[0];
+        const ticket_type = 'normal';
+        const startingNumber = 500; // Normal starts at 500
+
+        // Get or create the counter for today
+        const { data: existingCounter } = await supabaseAdmin
+          .from('ticket_counters')
+          .select('*')
+          .eq('unit_id', unit_id)
+          .eq('ticket_type', ticket_type)
+          .eq('counter_date', today)
+          .single();
+
+        let nextNumber: number;
+
+        if (!existingCounter) {
+          // Create new counter for today
+          nextNumber = startingNumber;
+          await supabaseAdmin
+            .from('ticket_counters')
+            .insert({
+              unit_id,
+              ticket_type,
+              counter_date: today,
+              last_number: nextNumber,
+            });
+        } else {
+          // Increment the counter
+          nextNumber = existingCounter.last_number + 1;
+          await supabaseAdmin
+            .from('ticket_counters')
+            .update({ last_number: nextNumber })
+            .eq('id', existingCounter.id);
+        }
+
+        // Generate display code
+        const displayCode = `N-${nextNumber.toString().padStart(3, '0')}`;
+
+        // Get settings for priority
+        const { data: settings } = await supabaseAdmin
+          .from('settings')
+          .select('normal_priority')
+          .eq('unit_id', unit_id)
+          .single();
+
+        const priority = settings?.normal_priority || 5;
+
+        // Create the ticket directly as 'called'
+        const { data: newTicket, error: createError } = await supabaseAdmin
+          .from('tickets')
+          .insert({
+            unit_id,
+            ticket_type,
+            ticket_number: nextNumber,
+            display_code: displayCode,
+            priority,
+            status: 'called',
+            called_at: new Date().toISOString(),
+            counter_id: counter_id,
+            attendant_id: user.id,
+            locked_by: user.id,
+            locked_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (createError || !newTicket) {
+          console.error('Error creating ticket:', createError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao criar senha' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('Ticket created and called:', newTicket.display_code);
+
+        // Log the action
+        await supabaseAdmin.from('audit_logs').insert({
+          action: 'ticket_called',
+          entity_type: 'ticket',
+          entity_id: newTicket.id,
+          user_id: user.id,
+          unit_id: unit_id,
+          details: { counter_id, display_code: newTicket.display_code, auto_created: true },
+        });
+
         return new Response(
-          JSON.stringify({ error: 'Nenhuma senha na fila' }),
+          JSON.stringify({ success: true, ticket: newTicket }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('Found next ticket:', nextTicket.display_code);
+      console.log('Found next ticket:', ticketToCall.display_code);
 
       // Try to lock and update the ticket atomically
       const { data: updatedTicket, error: updateError } = await supabaseAdmin
@@ -95,7 +185,7 @@ Deno.serve(async (req) => {
           locked_by: user.id,
           locked_at: new Date().toISOString(),
         })
-        .eq('id', nextTicket.id)
+        .eq('id', ticketToCall.id)
         .eq('status', 'waiting') // Ensure it's still waiting (optimistic lock)
         .select()
         .single();
