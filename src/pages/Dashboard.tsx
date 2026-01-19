@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useVoice } from '@/hooks/useVoice';
@@ -18,7 +18,8 @@ import {
   Volume2,
   Users,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Shield
 } from 'lucide-react';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
@@ -31,7 +32,7 @@ type Ticket = Database['public']['Tables']['tickets']['Row'];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isAdmin, signOut } = useAuth();
   const [counter, setCounter] = useState<Counter | null>(null);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
@@ -215,6 +216,14 @@ export default function Dashboard() {
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name}
               </span>
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="outline" size="sm">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair
