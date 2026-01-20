@@ -88,7 +88,7 @@ export default function Auth() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-accent/5 relative overflow-hidden transition-opacity duration-700 ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-accent/5 relative overflow-hidden transition-opacity duration-700 ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`}>
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -108,55 +108,56 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className={`relative z-10 w-full max-w-md space-y-8 transition-all duration-1000 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-        {/* Logo and Title */}
-        <div className="text-center space-y-4">
-          <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-            <div className="relative mx-auto w-28 h-28 mb-4">
-              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-              <img 
-                src={treLogo} 
-                alt="TRE-MA Logo" 
-                className="w-28 h-28 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
-              />
+      {/* Main content - Two column layout */}
+      <div className={`relative z-10 w-full max-w-5xl flex flex-col lg:flex-row items-center gap-8 lg:gap-16 transition-all duration-1000 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        
+        {/* Left side - Features */}
+        <div className={`flex-1 space-y-8 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
+          <div className="text-center lg:text-left space-y-4">
+            <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+              <div className="relative mx-auto lg:mx-0 w-32 h-32 mb-6">
+                <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+                <img 
+                  src={treLogo} 
+                  alt="TRE-MA Logo" 
+                  className="w-32 h-32 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
+                />
+              </div>
             </div>
-          </div>
-          
-          <div className={`space-y-2 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
               Tribunal Regional Eleitoral
             </h1>
-            <p className="text-lg font-medium text-primary">Maranhão</p>
-            <p className="text-sm text-muted-foreground">Sistema de Chamada de Senhas</p>
+            <p className="text-xl font-medium text-primary">Maranhão</p>
+            <p className="text-base text-muted-foreground">Sistema de Chamada de Senhas</p>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-2 gap-6">
+            {features.map((feature, index) => (
+              <div 
+                key={feature.label}
+                className={`group flex items-center gap-4 p-4 bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 cursor-default hover:bg-primary/5 hover:border-primary/30 transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
+                style={{ transitionDelay: `${600 + index * 100}ms` }}
+              >
+                <div className="p-4 bg-primary/10 rounded-xl group-hover:bg-primary group-hover:scale-110 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/25">
+                  <feature.icon className="h-7 w-7 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+                </div>
+                <span className="text-base font-medium text-foreground group-hover:text-primary transition-colors duration-300">{feature.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Features Icons */}
-        <div className={`flex flex-wrap justify-center gap-4 transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
-          {features.map((feature, index) => (
-            <div 
-              key={feature.label}
-              className="group flex flex-col items-center gap-1 cursor-default"
-              style={{ animationDelay: `${600 + index * 100}ms` }}
-            >
-              <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary group-hover:scale-110 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/25">
-                <feature.icon className="h-5 w-5 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
-              </div>
-              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300">{feature.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Login Card */}
-        <div className={`transition-all duration-1000 delay-700 ${isPageLoaded ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'}`}>
+        {/* Right side - Login Card */}
+        <div className={`w-full lg:w-[420px] transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-10 opacity-0 scale-95'}`}>
           <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 overflow-hidden">
             {/* Card header with gradient */}
             <div className="h-2 bg-gradient-to-r from-primary via-accent to-primary" />
             
-            <form onSubmit={handleLogin} className="p-6 space-y-5">
-              <div className="text-center space-y-1">
-                <h2 className="text-xl font-semibold text-foreground">Acesso ao Sistema</h2>
+            <form onSubmit={handleLogin} className="p-8 space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-semibold text-foreground">Acesso ao Sistema</h2>
                 <p className="text-sm text-muted-foreground">Entre com suas credenciais</p>
               </div>
 
@@ -166,7 +167,7 @@ export default function Auth() {
                 </Alert>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
                   <div className="relative group">
@@ -221,13 +222,13 @@ export default function Auth() {
               </Button>
             </form>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className={`text-center transition-all duration-1000 delay-1000 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} TRE-MA • Sistema de Chamada de Senhas
-          </p>
+          {/* Footer */}
+          <div className={`text-center mt-6 transition-all duration-1000 delay-700 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} TRE-MA • Sistema de Chamada de Senhas
+            </p>
+          </div>
         </div>
       </div>
     </div>
