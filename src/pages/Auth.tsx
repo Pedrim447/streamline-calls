@@ -88,7 +88,7 @@ export default function Auth() {
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-between px-8 lg:px-16 py-8 bg-gradient-to-br from-primary/10 via-background to-accent/5 relative overflow-hidden transition-opacity duration-700 ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center py-8 bg-gradient-to-br from-primary/10 via-background to-accent/5 relative overflow-hidden transition-opacity duration-700 ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`}>
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -108,54 +108,67 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Left side - Features (pushed to corner) */}
-      <div className={`flex-shrink-0 space-y-10 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
-        <div className="space-y-6">
-          <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-            <div className="relative w-44 h-44 mb-8">
-              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-              <img 
-                src={treLogo} 
-                alt="TRE-MA Logo" 
-                className="w-44 h-44 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
-              />
-            </div>
+      {/* Center content - Logo, Title, Features */}
+      <div className={`flex flex-col items-center space-y-6 mb-8 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}`}>
+        {/* Logo */}
+        <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+          <div className="relative w-32 h-32">
+            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+            <img 
+              src={treLogo} 
+              alt="TRE-MA Logo" 
+              className="w-32 h-32 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
+            />
           </div>
-          
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+        </div>
+        
+        {/* Title */}
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Tribunal Regional Eleitoral
           </h1>
-          <p className="text-2xl font-medium text-primary">Maranhão</p>
-          <p className="text-lg text-muted-foreground">Sistema de Chamada de Senhas</p>
+          <p className="text-xl font-medium text-primary">Maranhão</p>
+          <p className="text-sm text-muted-foreground">Sistema de Chamada de Senhas</p>
         </div>
 
-        {/* Features - No container, just icons with labels */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-          {features.map((feature, index) => (
+        {/* Features - horizontal layout */}
+        <div className="flex flex-wrap justify-center gap-6 mt-4">
+          {features.slice(0, 5).map((feature, index) => (
             <div 
               key={feature.label}
-              className={`group flex items-center gap-4 cursor-default transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
+              className={`group flex flex-col items-center gap-1 cursor-default transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
               style={{ transitionDelay: `${600 + index * 100}ms` }}
             >
-              <div className="p-3 rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
-                <feature.icon className="h-8 w-8 text-primary group-hover:text-primary transition-colors duration-300" />
+              <div className="p-2 rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
+                <feature.icon className="h-6 w-6 text-primary group-hover:text-primary transition-colors duration-300" />
               </div>
-              <span className="text-lg font-medium text-foreground group-hover:text-primary transition-colors duration-300">{feature.label}</span>
+              <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">{feature.label}</span>
             </div>
           ))}
         </div>
+        <div className="flex justify-center">
+          <div 
+            className={`group flex flex-col items-center gap-1 cursor-default transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
+            style={{ transitionDelay: '1100ms' }}
+          >
+            <div className="p-2 rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
+              <BarChart3 className="h-6 w-6 text-primary group-hover:text-primary transition-colors duration-300" />
+            </div>
+            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">Relatórios</span>
+          </div>
+        </div>
       </div>
 
-      {/* Right side - Login Card (larger and more visible) */}
-      <div className={`w-full max-w-xl transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-x-0 opacity-100 scale-100' : 'translate-x-10 opacity-0 scale-95'}`}>
-        <div className="bg-card backdrop-blur-xl rounded-3xl shadow-2xl border border-border overflow-hidden">
+      {/* Login Card - taller and narrower */}
+      <div className={`w-full max-w-md transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'}`}>
+        <div className="bg-card backdrop-blur-xl rounded-2xl shadow-2xl border border-border overflow-hidden">
           {/* Card header with gradient */}
-          <div className="h-3 bg-gradient-to-r from-primary via-accent to-primary" />
+          <div className="h-2 bg-gradient-to-r from-primary via-accent to-primary" />
           
-          <form onSubmit={handleLogin} className="p-10 space-y-8">
-            <div className="text-center space-y-3">
-              <h2 className="text-3xl font-semibold text-foreground">Acesso ao Sistema</h2>
-              <p className="text-base text-muted-foreground">Entre com suas credenciais</p>
+          <form onSubmit={handleLogin} className="px-8 py-6 space-y-5">
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-semibold text-foreground">Acesso ao Sistema</h2>
+              <p className="text-sm text-muted-foreground">Entre com suas credenciais</p>
             </div>
 
             {error && (
@@ -164,9 +177,9 @@ export default function Auth() {
               </Alert>
             )}
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="login-email" className="text-base font-medium">Email</Label>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
                 <div className="relative group">
                   <Input
                     id="login-email"
@@ -176,14 +189,14 @@ export default function Auth() {
                     onChange={(e) => setLoginEmail(e.target.value)}
                     disabled={isLoading}
                     required
-                    className="h-14 text-lg pl-5 pr-5 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
+                    className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
                   />
                   <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="login-password" className="text-base font-medium">Senha</Label>
+              <div className="space-y-2">
+                <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
                 <div className="relative group">
                   <Input
                     id="login-password"
@@ -193,7 +206,7 @@ export default function Auth() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     disabled={isLoading}
                     required
-                    className="h-14 text-lg pl-5 pr-5 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
+                    className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
                   />
                   <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
@@ -202,13 +215,13 @@ export default function Auth() {
 
             <Button 
               type="submit" 
-              className="w-full h-14 text-lg font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
+              className="w-full h-11 text-sm font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
               disabled={isLoading}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                     Entrando...
                   </>
                 ) : (
@@ -219,13 +232,13 @@ export default function Auth() {
             </Button>
           </form>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className={`text-center mt-8 transition-all duration-1000 delay-700 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TRE-MA • Sistema de Chamada de Senhas
-          </p>
-        </div>
+      {/* Footer */}
+      <div className={`text-center mt-8 transition-all duration-1000 delay-700 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
+        <p className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} TRE-MA • Sistema de Chamada de Senhas
+        </p>
       </div>
     </div>
   );
