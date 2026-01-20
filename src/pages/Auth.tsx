@@ -4,37 +4,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Users, Shield, Zap } from 'lucide-react';
+import { Loader2, Users, Shield, Zap, Volume2, Clock, BarChart3 } from 'lucide-react';
 import { z } from 'zod';
+import treLogo from '@/assets/tre-logo.png';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
-const nameSchema = z.string().min(2, 'Nome deve ter no mínimo 2 caracteres');
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading, signIn, signUp } = useAuth();
+  const { user, isLoading: authLoading, signIn } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
-  // Signup form
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+
+  useEffect(() => {
+    // Trigger page load animation
+    const timer = setTimeout(() => setIsPageLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/dashboard');
+      setIsLoggingIn(true);
+      setTimeout(() => navigate('/dashboard'), 800);
     }
   }, [user, authLoading, navigate]);
 
@@ -55,6 +55,7 @@ export default function Auth() {
         } else {
           setError(error.message);
         }
+        setIsLoading(false);
       }
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -62,132 +63,113 @@ export default function Auth() {
       } else {
         setError('Erro ao fazer login');
       }
-    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setIsLoading(true);
-
-    try {
-      nameSchema.parse(signupName);
-      emailSchema.parse(signupEmail);
-      passwordSchema.parse(signupPassword);
-
-      if (signupPassword !== signupConfirmPassword) {
-        setError('As senhas não coincidem');
-        setIsLoading(false);
-        return;
-      }
-
-      const { error } = await signUp(signupEmail, signupPassword, signupName);
-      
-      if (error) {
-        if (error.message.includes('already registered')) {
-          setError('Este email já está cadastrado');
-        } else {
-          setError(error.message);
-        }
-      } else {
-        setSuccess('Conta criada com sucesso! Você será redirecionado...');
-      }
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        setError(err.errors[0].message);
-      } else {
-        setError('Erro ao criar conta');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const features = [
+    { icon: Users, label: 'Multi-atendente' },
+    { icon: Shield, label: 'Seguro' },
+    { icon: Zap, label: 'Tempo Real' },
+    { icon: Volume2, label: 'Chamada por Voz' },
+    { icon: Clock, label: 'Controle de Fila' },
+    { icon: BarChart3, label: 'Relatórios' },
+  ];
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <div className="relative">
+          <div className="absolute inset-0 animate-ping rounded-full h-16 w-16 bg-primary/20" />
+          <Loader2 className="h-16 w-16 animate-spin text-primary relative z-10" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left side - Branding */}
-      <div className="lg:w-1/2 bg-primary p-8 lg:p-16 flex flex-col justify-center text-primary-foreground">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-4xl lg:text-5xl font-bold mb-6">
-            Sistema de Chamada de Senhas
-          </h1>
-          <p className="text-lg lg:text-xl opacity-90 mb-8">
-            Gerencie filas de atendimento com eficiência, controle em tempo real e 
-            chamada por voz integrada.
-          </p>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary-foreground/20 rounded-lg">
-                <Users className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Multi-atendente</h3>
-                <p className="text-sm opacity-80">Vários atendentes simultâneos</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary-foreground/20 rounded-lg">
-                <Shield className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Controle Seguro</h3>
-                <p className="text-sm opacity-80">Sem chamadas duplicadas</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary-foreground/20 rounded-lg">
-                <Zap className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Tempo Real</h3>
-                <p className="text-sm opacity-80">Atualização instantânea</p>
-              </div>
-            </div>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-primary/10 via-background to-accent/5 relative overflow-hidden transition-opacity duration-700 ${isPageLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      {/* Login success overlay */}
+      <div className={`fixed inset-0 bg-primary z-50 flex items-center justify-center transition-all duration-700 ${isLoggingIn ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className="text-center space-y-4">
+          <div className="w-24 h-24 mx-auto bg-primary-foreground/20 rounded-full flex items-center justify-center animate-bounce">
+            <svg className="w-12 h-12 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
+          <p className="text-primary-foreground text-2xl font-semibold animate-pulse">Entrando...</p>
         </div>
       </div>
 
-      {/* Right side - Auth forms */}
-      <div className="lg:w-1/2 p-8 lg:p-16 flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md border-0 shadow-xl">
-          <Tabs defaultValue="login" className="w-full">
-            <CardHeader>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-              </TabsList>
-            </CardHeader>
+      {/* Main content */}
+      <div className={`relative z-10 w-full max-w-md space-y-8 transition-all duration-1000 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        {/* Logo and Title */}
+        <div className="text-center space-y-4">
+          <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+            <div className="relative mx-auto w-28 h-28 mb-4">
+              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+              <img 
+                src={treLogo} 
+                alt="TRE-MA Logo" 
+                className="w-28 h-28 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
+              />
+            </div>
+          </div>
+          
+          <div className={`space-y-2 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Tribunal Regional Eleitoral
+            </h1>
+            <p className="text-lg font-medium text-primary">Maranhão</p>
+            <p className="text-sm text-muted-foreground">Sistema de Chamada de Senhas</p>
+          </div>
+        </div>
 
-            <TabsContent value="login">
-              <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4">
-                  <CardTitle>Bem-vindo de volta</CardTitle>
-                  <CardDescription>
-                    Entre com suas credenciais para acessar o sistema
-                  </CardDescription>
+        {/* Features Icons */}
+        <div className={`flex flex-wrap justify-center gap-4 transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
+          {features.map((feature, index) => (
+            <div 
+              key={feature.label}
+              className="group flex flex-col items-center gap-1 cursor-default"
+              style={{ animationDelay: `${600 + index * 100}ms` }}
+            >
+              <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary group-hover:scale-110 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-primary/25">
+                <feature.icon className="h-5 w-5 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
+              </div>
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-300">{feature.label}</span>
+            </div>
+          ))}
+        </div>
 
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+        {/* Login Card */}
+        <div className={`transition-all duration-1000 delay-700 ${isPageLoaded ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'}`}>
+          <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 overflow-hidden">
+            {/* Card header with gradient */}
+            <div className="h-2 bg-gradient-to-r from-primary via-accent to-primary" />
+            
+            <form onSubmit={handleLogin} className="p-6 space-y-5">
+              <div className="text-center space-y-1">
+                <h2 className="text-xl font-semibold text-foreground">Acesso ao Sistema</h2>
+                <p className="text-sm text-muted-foreground">Entre com suas credenciais</p>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+              {error && (
+                <Alert variant="destructive" className="animate-fade-in">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
+                  <div className="relative group">
                     <Input
                       id="login-email"
                       type="email"
@@ -196,11 +178,15 @@ export default function Auth() {
                       onChange={(e) => setLoginEmail(e.target.value)}
                       disabled={isLoading}
                       required
+                      className="h-12 pl-4 pr-4 bg-background/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
                     />
+                    <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
+                  <div className="relative group">
                     <Input
                       id="login-password"
                       type="password"
@@ -209,114 +195,40 @@ export default function Auth() {
                       onChange={(e) => setLoginPassword(e.target.value)}
                       disabled={isLoading}
                       required
+                      className="h-12 pl-4 pr-4 bg-background/50 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
                     />
+                    <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   </div>
-                </CardContent>
+                </div>
+              </div>
 
-                <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Entrando...
-                      </>
-                    ) : (
-                      'Entrar'
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup}>
-                <CardContent className="space-y-4">
-                  <CardTitle>Criar nova conta</CardTitle>
-                  <CardDescription>
-                    Preencha os dados para criar sua conta
-                  </CardDescription>
-
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-base font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
+                disabled={isLoading}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    'Entrar'
                   )}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </Button>
+            </form>
+          </div>
+        </div>
 
-                  {success && (
-                    <Alert className="border-success bg-success/10">
-                      <AlertDescription className="text-success">{success}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">Confirmar senha</Label>
-                    <Input
-                      id="signup-confirm"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signupConfirmPassword}
-                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-                </CardContent>
-
-                <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando conta...
-                      </>
-                    ) : (
-                      'Criar conta'
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </Card>
+        {/* Footer */}
+        <div className={`text-center transition-all duration-1000 delay-1000 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}>
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} TRE-MA • Sistema de Chamada de Senhas
+          </p>
+        </div>
       </div>
     </div>
   );
