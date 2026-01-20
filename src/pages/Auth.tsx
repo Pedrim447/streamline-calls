@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Users, Shield, Zap, Volume2, Clock, BarChart3 } from 'lucide-react';
+import { Loader2, Shield, Clock } from 'lucide-react';
 import { z } from 'zod';
 import treLogo from '@/assets/tre-logo.png';
 
@@ -68,12 +68,8 @@ export default function Auth() {
   };
 
   const features = [
-    { icon: Users, label: 'Multi-atendente' },
     { icon: Shield, label: 'Seguro' },
-    { icon: Zap, label: 'Tempo Real' },
-    { icon: Volume2, label: 'Chamada por Voz' },
     { icon: Clock, label: 'Controle de Fila' },
-    { icon: BarChart3, label: 'Relatórios' },
   ];
 
   if (authLoading) {
@@ -132,8 +128,8 @@ export default function Auth() {
         </div>
 
         {/* Features - horizontal layout */}
-        <div className="flex flex-wrap justify-center gap-6 mt-4">
-          {features.slice(0, 5).map((feature, index) => (
+        <div className="flex justify-center gap-8 mt-4">
+          {features.map((feature, index) => (
             <div 
               key={feature.label}
               className={`group flex flex-col items-center gap-1 cursor-default transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
@@ -145,17 +141,6 @@ export default function Auth() {
               <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">{feature.label}</span>
             </div>
           ))}
-        </div>
-        <div className="flex justify-center">
-          <div 
-            className={`group flex flex-col items-center gap-1 cursor-default transition-all duration-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
-            style={{ transitionDelay: '1100ms' }}
-          >
-            <div className="p-2 rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
-              <BarChart3 className="h-6 w-6 text-primary group-hover:text-primary transition-colors duration-300" />
-            </div>
-            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">Relatórios</span>
-          </div>
         </div>
       </div>
 
