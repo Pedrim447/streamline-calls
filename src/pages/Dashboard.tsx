@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useVoice } from '@/hooks/useVoice';
+import { useCallCooldown } from '@/hooks/useCallCooldown';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,7 +66,7 @@ export default function Dashboard() {
   });
 
   const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
-
+  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 5 });
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -172,12 +173,15 @@ export default function Dashboard() {
 
   const handleCallNext = async () => {
     if (!counter) return;
+    if (cooldownRemaining > 0) return; // Prevent calling during cooldown
+    
     setIsProcessing(true);
     
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
       callTicket(ticket.display_code, counter.number);
+      startCooldown(); // Start 5 second cooldown after successful call
     }
     
     setIsProcessing(false);
@@ -185,11 +189,14 @@ export default function Dashboard() {
 
   const handleRepeatCall = async () => {
     if (!currentTicket || !counter) return;
+    if (cooldownRemaining > 0) return; // Prevent calling during cooldown
+    
     setIsProcessing(true);
     
     await repeatCall(currentTicket.id);
     // Use soft voice and gentle chime for repeat calls
     repeatCallSoft(currentTicket.display_code, counter.number);
+    startCooldown(); // Start 5 second cooldown after repeat
     
     setIsProcessing(false);
   };
@@ -375,6 +382,8 @@ export default function Dashboard() {
                 counter={counter}
                 isSpeaking={isSpeaking}
                 isProcessing={isProcessing}
+                cooldownRemaining={cooldownRemaining}
+                nextTickets={waitingTickets.slice(0, 5)}
                 onRepeatCall={handleRepeatCall}
                 onStartService={handleStartService}
                 onCompleteService={handleCompleteService}
@@ -390,18 +399,32 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Cooldown indicator */}
+                  {cooldownRemaining > 0 && (
+                    <div className="text-center py-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        Aguarde <span className="font-bold text-primary">{cooldownRemaining}s</span> para chamar novamente
+                      </p>
+                    </div>
+                  )}
+
                   <Button 
                     size="lg" 
                     className="w-full h-16 text-lg bg-primary hover:bg-primary/90"
                     onClick={handleCallNext}
-                    disabled={isProcessing || currentTicket !== null}
+                    disabled={isProcessing || currentTicket !== null || cooldownRemaining > 0}
                   >
                     {isProcessing ? (
                       <RefreshCw className="h-6 w-6 mr-2 animate-spin" />
+                    ) : cooldownRemaining > 0 ? (
+                      <>
+                        <Clock className="h-6 w-6 mr-2" />
+                        Aguarde {cooldownRemaining}s
+                      </>
                     ) : (
                       <PhoneForwarded className="h-6 w-6 mr-2" />
                     )}
-                    Chamar Próxima Senha
+                    {cooldownRemaining > 0 ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
                   {currentTicket && (
@@ -409,10 +432,10 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={handleRepeatCall}
-                        disabled={isProcessing || isSpeaking}
+                        disabled={isProcessing || isSpeaking || cooldownRemaining > 0}
                       >
                         <Volume2 className="h-4 w-4 mr-2" />
-                        Repetir
+                        {cooldownRemaining > 0 ? `${cooldownRemaining}s` : 'Repetir'}
                       </Button>
                       
                       {currentTicket.status === 'called' ? (
