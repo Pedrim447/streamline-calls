@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface VoiceSettings {
   enabled: boolean;
@@ -62,10 +62,43 @@ function numberToWords(num: number): string {
 export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const voiceSettings = { ...defaultSettings, ...settings };
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // Initialize voices on mount - needed for some browsers
+  useEffect(() => {
+    if (!window.speechSynthesis) {
+      console.warn('Speech synthesis not supported');
+      return;
+    }
+
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setVoicesLoaded(true);
+        console.log('Voices loaded:', voices.length);
+      }
+    };
+
+    // Load voices immediately if available
+    loadVoices();
+
+    // Also listen for voiceschanged event (needed for Chrome)
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    };
+  }, []);
+
   const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false) => {
-    if (!voiceSettings.enabled || !window.speechSynthesis) {
+    if (!voiceSettings.enabled) {
+      console.log('Voice disabled in settings');
+      return;
+    }
+    
+    if (!window.speechSynthesis) {
+      console.warn('Speech synthesis not available');
       return;
     }
 
@@ -93,6 +126,8 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
       .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
       .replace('{counter}', counterSpoken);
 
+    console.log('Speaking:', message);
+
     // Create utterance
     const utterance = new SpeechSynthesisUtterance(message);
     utterance.lang = voiceSettings.lang;
@@ -113,14 +148,30 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     const ptVoice = voices.find(v => v.lang.startsWith('pt'));
     if (ptVoice) {
       utterance.voice = ptVoice;
+      console.log('Using voice:', ptVoice.name);
+    } else {
+      console.log('No Portuguese voice found, using default');
     }
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onstart = () => {
+      console.log('Speech started');
+      setIsSpeaking(true);
+    };
+    utterance.onend = () => {
+      console.log('Speech ended');
+      setIsSpeaking(false);
+    };
+    utterance.onerror = (event) => {
+      console.error('Speech error:', event.error);
+      setIsSpeaking(false);
+    };
 
     utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+    
+    // Chrome bug workaround: sometimes speech doesn't start without a small delay
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 100);
   }, [voiceSettings]);
 
   const stop = useCallback(() => {
