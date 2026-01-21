@@ -105,6 +105,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          birth_date: string | null
+          cpf: string | null
           created_at: string
           current_session_id: string | null
           email: string
@@ -112,12 +114,15 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_login_at: string | null
+          matricula: string | null
           unit_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           current_session_id?: string | null
           email: string
@@ -125,12 +130,15 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
+          matricula?: string | null
           unit_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           current_session_id?: string | null
           email?: string
@@ -138,6 +146,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_login_at?: string | null
+          matricula?: string | null
           unit_id?: string | null
           updated_at?: string
           user_id?: string
@@ -390,7 +399,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "attendant"
+      app_role: "admin" | "attendant" | "recepcao"
       ticket_status:
         | "waiting"
         | "called"
@@ -526,7 +535,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "attendant"],
+      app_role: ["admin", "attendant", "recepcao"],
       ticket_status: [
         "waiting",
         "called",
