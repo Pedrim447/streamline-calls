@@ -14,7 +14,7 @@ const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading, signIn } = useAuth();
+  const { user, isLoading: authLoading, signIn, roles } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +34,12 @@ export default function Auth() {
   useEffect(() => {
     if (user && !authLoading) {
       setIsLoggingIn(true);
-      setTimeout(() => navigate('/dashboard'), 800);
+      // Redirect based on role
+      const isRecepcao = roles.includes('recepcao');
+      const targetRoute = isRecepcao ? '/recepcao' : '/dashboard';
+      setTimeout(() => navigate(targetRoute), 800);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, roles]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

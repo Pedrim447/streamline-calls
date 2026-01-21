@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Reception from "./pages/Reception";
 import PublicPanel from "./pages/PublicPanel";
 import Widget from "./pages/Widget";
 import Admin from "./pages/Admin";
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Auth />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/recepcao" element={<Reception />} />
             <Route path="/painel" element={<PublicPanel />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/widget" element={<Widget />} />

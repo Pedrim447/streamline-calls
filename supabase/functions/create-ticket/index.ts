@@ -8,6 +8,8 @@ const corsHeaders = {
 interface CreateTicketRequest {
   unit_id: string;
   ticket_type: 'normal' | 'preferential';
+  client_name?: string;
+  client_cpf?: string;
 }
 
 Deno.serve(async (req) => {
@@ -23,7 +25,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreateTicketRequest = await req.json();
-    const { unit_id, ticket_type } = body;
+    const { unit_id, ticket_type, client_name, client_cpf } = body;
 
     if (!unit_id || !ticket_type) {
       return new Response(
@@ -115,6 +117,8 @@ Deno.serve(async (req) => {
         display_code: displayCode,
         priority,
         status: 'waiting',
+        client_name: client_name || null,
+        client_cpf: client_cpf || null,
       })
       .select()
       .single();
