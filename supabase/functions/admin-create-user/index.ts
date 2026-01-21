@@ -9,8 +9,12 @@ interface CreateUserRequest {
   email: string;
   password: string;
   full_name: string;
-  role: 'admin' | 'attendant';
+  role: 'admin' | 'attendant' | 'recepcao';
   unit_id: string;
+  matricula?: string;
+  cpf?: string;
+  birth_date?: string;
+  avatar_url?: string;
 }
 
 Deno.serve(async (req) => {
@@ -63,14 +67,14 @@ Deno.serve(async (req) => {
     }
 
     const body: CreateUserRequest = await req.json();
-    const { email, password, full_name, role, unit_id } = body;
+    const { email, password, full_name, role, unit_id, matricula, cpf, birth_date, avatar_url } = body;
 
     console.log('Creating user:', email, 'with role:', role);
 
-    // Validate inputs
+    // Validate required inputs
     if (!email || !password || !full_name || !role || !unit_id) {
       return new Response(
-        JSON.stringify({ error: 'Todos os campos são obrigatórios' }),
+        JSON.stringify({ error: 'Email, senha, nome completo, permissão e unidade são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -80,6 +84,47 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'A senha deve ter pelo menos 6 caracteres' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Validate CPF format (11 digits)
+    if (cpf && !/^\d{11}$/.test(cpf.replace(/\D/g, ''))) {
+      return new Response(
+        JSON.stringify({ error: 'CPF deve conter 11 dígitos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if matricula already exists
+    if (matricula) {
+      const { data: existingMatricula } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('matricula', matricula)
+        .single();
+
+      if (existingMatricula) {
+        return new Response(
+          JSON.stringify({ error: 'Matrícula já cadastrada' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Check if CPF already exists
+    if (cpf) {
+      const cleanCpf = cpf.replace(/\D/g, '');
+      const { data: existingCpf } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('cpf', cleanCpf)
+        .single();
+
+      if (existingCpf) {
+        return new Response(
+          JSON.stringify({ error: 'CPF já cadastrado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Create the user with admin API
@@ -102,10 +147,16 @@ Deno.serve(async (req) => {
 
     console.log('User created:', newUser.user?.id);
 
-    // Update the profile with unit_id
+    // Update the profile with additional fields
+    const profileUpdate: Record<string, unknown> = { unit_id };
+    if (matricula) profileUpdate.matricula = matricula;
+    if (cpf) profileUpdate.cpf = cpf.replace(/\D/g, '');
+    if (birth_date) profileUpdate.birth_date = birth_date;
+    if (avatar_url) profileUpdate.avatar_url = avatar_url;
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ unit_id })
+      .update(profileUpdate)
       .eq('user_id', newUser.user!.id);
 
     if (profileError) {
