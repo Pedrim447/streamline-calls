@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,7 +53,7 @@ export default function Reception() {
   const [clientCpf, setClientCpf] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
   
-  const printRef = useRef<HTMLDivElement>(null);
+  
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -122,8 +122,17 @@ export default function Reception() {
   };
 
   const handleCreateTicket = async () => {
-    if (!clientName.trim()) {
-      toast.error('Por favor, informe o nome do cliente');
+    const trimmedName = clientName.trim();
+    
+    // Validate name - must have at least 2 words (first and last name)
+    const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
+    if (nameParts.length < 2) {
+      toast.error('Por favor, informe o nome completo do cliente (nome e sobrenome)');
+      return;
+    }
+    
+    if (trimmedName.length < 5) {
+      toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
       return;
     }
     
@@ -165,68 +174,77 @@ export default function Reception() {
     }
   };
 
-  const handlePrint = () => {
-    if (printRef.current) {
-      const printContent = printRef.current.innerHTML;
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Senha - ${createdTicket?.display_code}</title>
-              <style>
+  const handlePrintTxt = () => {
+    if (!createdTicket) return;
+    
+    const ticketDate = new Date(createdTicket.created_at);
+    const dateStr = ticketDate.toLocaleDateString('pt-BR');
+    const timeStr = ticketDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const typeStr = createdTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'NORMAL';
+    
+    // Create TXT content
+    const txtContent = `
+========================================
+              SENHA
+========================================
+
+  Tipo: ${typeStr}
+  
+  Senha: ${createdTicket.display_code}
+  
+  Cliente: ${createdTicket.client_name}
+  
+  Data: ${dateStr}
+  Hora: ${timeStr}
+
+========================================
+  Aguarde ser chamado pelo painel
+========================================
+`.trim();
+
+    // Create a blob and download as TXT
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Senha ${createdTicket.display_code}</title>
+            <style>
+              body {
+                font-family: 'Courier New', Courier, monospace;
+                white-space: pre;
+                margin: 20px;
+                font-size: 14px;
+                line-height: 1.5;
+              }
+              @media print {
                 body {
-                  font-family: 'Courier New', monospace;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  min-height: 100vh;
                   margin: 0;
-                  padding: 20px;
+                  padding: 10mm;
                 }
-                .ticket {
-                  text-align: center;
-                  border: 2px dashed #000;
-                  padding: 30px;
-                  max-width: 300px;
-                }
-                .ticket-code {
-                  font-size: 48px;
-                  font-weight: bold;
-                  margin: 20px 0;
-                }
-                .ticket-type {
-                  font-size: 18px;
-                  margin-bottom: 10px;
-                  text-transform: uppercase;
-                }
-                .client-name {
-                  font-size: 16px;
-                  margin: 15px 0;
-                  word-wrap: break-word;
-                }
-                .ticket-date {
-                  font-size: 12px;
-                  color: #666;
-                  margin-top: 20px;
-                }
-                .header {
-                  font-size: 20px;
-                  font-weight: bold;
-                  margin-bottom: 10px;
-                }
-              </style>
-            </head>
-            <body>
-              ${printContent}
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-        printWindow.close();
-      }
+              }
+            </style>
+          </head>
+          <body>${txtContent}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
     }
+    
+    // Also offer download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `senha-${createdTicket.display_code}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleLogout = async () => {
@@ -478,21 +496,7 @@ export default function Reception() {
           
           {createdTicket && (
             <>
-              {/* Printable content */}
-              <div ref={printRef} className="hidden">
-                <div className="ticket">
-                  <div className="header">🎫 SENHA</div>
-                  <div className="ticket-type">
-                    {createdTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'NORMAL'}
-                  </div>
-                  <div className="ticket-code">{createdTicket.display_code}</div>
-                  <div className="client-name">{createdTicket.client_name}</div>
-                  <div className="ticket-date">
-                    {new Date(createdTicket.created_at).toLocaleDateString('pt-BR')} às{' '}
-                    {new Date(createdTicket.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
+
 
               {/* Visual display */}
               <div className="text-center space-y-4 py-4">
@@ -525,10 +529,10 @@ export default function Reception() {
                 </Button>
                 <Button 
                   className="flex-1"
-                  onClick={handlePrint}
+                  onClick={handlePrintTxt}
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  Imprimir
+                  Imprimir TXT
                 </Button>
               </div>
             </>

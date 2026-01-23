@@ -133,6 +133,16 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
       if (error) throw error;
       
+      // Check if queue is empty
+      if (data.queue_empty || data.no_tickets) {
+        toast({
+          title: 'Fila Vazia',
+          description: data.error || 'Não há senhas na fila para chamar. Aguarde a recepção entregar novas senhas.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+      
       if (data.error) {
         toast({
           title: 'Aviso',
