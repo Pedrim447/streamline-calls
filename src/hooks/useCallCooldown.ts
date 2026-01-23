@@ -5,7 +5,7 @@ interface UseCallCooldownOptions {
 }
 
 export function useCallCooldown(options: UseCallCooldownOptions = {}) {
-  const { duration = 5 } = options;
+  const { duration = 3 } = options; // Reduced from 5s to 3s for faster operation
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 

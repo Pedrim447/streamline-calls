@@ -149,6 +149,7 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
+      // Voice call immediately for instant feedback
       callTicket(ticket.display_code, counter.number);
     }
     
