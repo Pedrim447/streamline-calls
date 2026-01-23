@@ -85,10 +85,14 @@ export default function Reception() {
 
     fetchTickets();
 
-    // Subscribe to realtime updates
+    // Subscribe to realtime updates with broadcast support
     const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
     const channel = supabase
-      .channel('reception-tickets')
+      .channel(`reception-${unitId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         'postgres_changes',
         {
@@ -98,10 +102,17 @@ export default function Reception() {
           filter: `unit_id=eq.${unitId}`,
         },
         () => {
+          console.log('[Reception] Realtime ticket change');
           fetchTickets();
         }
       )
-      .subscribe();
+      .on('broadcast', { event: 'ticket_called' }, () => {
+        console.log('[Reception] Broadcast ticket_called received');
+        fetchTickets();
+      })
+      .subscribe((status) => {
+        console.log('[Reception] Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
