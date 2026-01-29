@@ -236,24 +236,24 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     playNote(659.25, 0.15, 0.7, 0.12);   // E5 - even quieter
   }, []);
 
-  const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true) => {
+  const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true, clientName?: string) => {
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber, false);
+        speak(ticketCode, counterNumber, false, clientName);
       }, 600);
     } else {
-      speak(ticketCode, counterNumber, false);
+      speak(ticketCode, counterNumber, false, clientName);
     }
   }, [speak, playAlertSound]);
 
   // Soft repeat call with gentle chime and calmer voice
-  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string) => {
+  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string, clientName?: string) => {
     playSoftChime();
     // Small delay before soft voice
     setTimeout(() => {
-      speak(ticketCode, counterNumber, true);
+      speak(ticketCode, counterNumber, true, clientName);
     }, 500);
   }, [speak, playSoftChime]);
 
