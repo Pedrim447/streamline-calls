@@ -65,7 +65,6 @@ export default function Dashboard() {
     realtime: true 
   });
 
-  const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
   const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s
   // Redirect if not authenticated
   useEffect(() => {
