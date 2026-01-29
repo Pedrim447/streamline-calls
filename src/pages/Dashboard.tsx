@@ -66,7 +66,7 @@ export default function Dashboard() {
   });
 
   const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
-  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s
+  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 5 });
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -173,20 +173,15 @@ export default function Dashboard() {
 
   const handleCallNext = async () => {
     if (!counter) return;
-    if (cooldownRemaining > 0) return;
+    if (cooldownRemaining > 0) return; // Prevent calling during cooldown
     
-    // Start processing immediately for instant feedback
     setIsProcessing(true);
-    startCooldown(); // Start cooldown immediately for faster UX
     
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
-      // Voice call happens immediately after ticket is returned
       callTicket(ticket.display_code, counter.number);
-    } else {
-      // If no ticket was returned (empty queue), we don't need to do anything
-      // The toast was already shown by callNextTicket
+      startCooldown(); // Start 5 second cooldown after successful call
     }
     
     setIsProcessing(false);
@@ -194,14 +189,14 @@ export default function Dashboard() {
 
   const handleRepeatCall = async () => {
     if (!currentTicket || !counter) return;
-    if (cooldownRemaining > 0) return;
+    if (cooldownRemaining > 0) return; // Prevent calling during cooldown
     
     setIsProcessing(true);
-    startCooldown(); // Start cooldown immediately
     
-    // Voice first for instant feedback
-    repeatCallSoft(currentTicket.display_code, counter.number);
     await repeatCall(currentTicket.id);
+    // Use soft voice and gentle chime for repeat calls
+    repeatCallSoft(currentTicket.display_code, counter.number);
+    startCooldown(); // Start 5 second cooldown after repeat
     
     setIsProcessing(false);
   };

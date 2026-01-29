@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +23,6 @@ export function useTickets(options: UseTicketsOptions = {}) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const effectiveUnitId = unitId ?? profile?.unit_id;
 
@@ -60,38 +59,16 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
   }, [effectiveUnitId, status, limit]);
 
-  // Optimistic update helper
-  const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
-    setTickets(prev => prev.map(t => 
-      t.id === ticketId ? { ...t, ...updates } : t
-    ));
-  }, []);
-
-  // Broadcast helper for instant updates across clients
-  const broadcastUpdate = useCallback((event: string, payload: any) => {
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event,
-        payload,
-      });
-    }
-  }, []);
-
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
-  // Realtime subscription with broadcast support
+  // Realtime subscription
   useEffect(() => {
     if (!realtime || !effectiveUnitId) return;
 
     const channel = supabase
-      .channel(`tickets-${effectiveUnitId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel('tickets-changes')
       .on(
         'postgres_changes',
         {
@@ -101,12 +78,9 @@ export function useTickets(options: UseTicketsOptions = {}) {
           filter: `unit_id=eq.${effectiveUnitId}`,
         },
         (payload) => {
-          console.log('[Realtime] DB change:', payload.eventType);
           if (payload.eventType === 'INSERT') {
             setTickets(prev => {
               const newTicket = payload.new as Ticket;
-              // Check if already exists (optimistic update)
-              if (prev.some(t => t.id === newTicket.id)) return prev;
               // Check if matches status filter
               if (status && status.length > 0 && !status.includes(newTicket.status)) {
                 return prev;
@@ -131,25 +105,10 @@ export function useTickets(options: UseTicketsOptions = {}) {
           }
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
-        console.log('[Realtime] Broadcast ticket_called:', payload);
-        // Instant update from broadcast (faster than DB change propagation)
-        if (payload?.ticket) {
-          setTickets(prev => prev.map(t => 
-            t.id === payload.ticket.id ? { ...t, ...payload.ticket } : t
-          ));
-        }
-      })
-      .subscribe((status) => {
-        console.log('[Realtime] Subscription status:', status);
-      });
-
-    channelRef.current = channel;
+      .subscribe();
 
     return () => {
-      console.log('[Realtime] Cleaning up channel');
       supabase.removeChannel(channel);
-      channelRef.current = null;
     };
   }, [realtime, effectiveUnitId, status]);
 

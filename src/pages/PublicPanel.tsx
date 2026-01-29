@@ -72,14 +72,10 @@ export default function PublicPanel() {
     }
   }, [counters, fetchRecentCalls]);
 
-  // Subscribe to real-time updates with broadcast for instant response
+  // Subscribe to real-time updates
   useEffect(() => {
     const channel = supabase
-      .channel('public-panel-realtime', {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel('public-panel')
       .on(
         'postgres_changes',
         {
@@ -92,47 +88,34 @@ export default function PublicPanel() {
           
           // If a ticket was just called, trigger animation and voice
           if (updatedTicket.status === 'called' && updatedTicket.called_at) {
-            handleNewCall(updatedTicket);
+            const ticketWithCounter: TicketWithCounter = {
+              ...updatedTicket,
+              counter: updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined,
+            };
+            
+            setIsAnimating(true);
+            setCurrentTicket(ticketWithCounter);
+            
+            // Play voice announcement
+            if (ticketWithCounter.counter) {
+              callTicket(updatedTicket.display_code, ticketWithCounter.counter.number);
+            }
+            
+            // Move previous current to history
+            setLastCalls(prev => {
+              const filtered = prev.filter(t => t.id !== updatedTicket.id);
+              return filtered.slice(0, 4);
+            });
+            
+            setTimeout(() => setIsAnimating(false), 2000);
           }
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
-        // Instant response from broadcast (faster than DB propagation)
-        console.log('[PublicPanel] Broadcast received:', payload);
-        if (payload?.ticket && payload.ticket.status === 'called') {
-          handleNewCall(payload.ticket);
-        }
-      })
-      .subscribe((status) => {
-        console.log('[PublicPanel] Subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [counters, callTicket]);
-
-  const handleNewCall = useCallback((updatedTicket: Ticket) => {
-    const ticketWithCounter: TicketWithCounter = {
-      ...updatedTicket,
-      counter: updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined,
-    };
-    
-    setIsAnimating(true);
-    setCurrentTicket(ticketWithCounter);
-    
-    // Play voice announcement
-    if (ticketWithCounter.counter) {
-      callTicket(updatedTicket.display_code, ticketWithCounter.counter.number);
-    }
-    
-    // Move previous current to history
-    setLastCalls(prev => {
-      const filtered = prev.filter(t => t.id !== updatedTicket.id);
-      return filtered.slice(0, 4);
-    });
-    
-    setTimeout(() => setIsAnimating(false), 2000);
   }, [counters, callTicket]);
 
   const toggleFullscreen = () => {
