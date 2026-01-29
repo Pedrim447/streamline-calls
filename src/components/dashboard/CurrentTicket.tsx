@@ -131,16 +131,6 @@ export function CurrentTicket({
               </span>
             </div>
 
-            {/* Speaking Indicator */}
-            {isSpeaking && (
-              <div className="flex items-center justify-center gap-3 py-4 bg-primary/10 rounded-lg animate-pulse">
-                <Volume2 className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold text-primary">Chamando a senha...</span>
-              </div>
-            )}
-
-            {/* Cooldown Progress */}
-            {isCooldownActive && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>Aguarde para chamar novamente</span>
