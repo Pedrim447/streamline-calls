@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContextREST';
+import { useAuth } from '@/contexts/AuthContext';
 import { FloatingWidget } from '@/components/FloatingWidget';
 import { Skeleton } from '@/components/ui/skeleton';
 
