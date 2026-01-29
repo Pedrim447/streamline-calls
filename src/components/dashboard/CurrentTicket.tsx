@@ -23,7 +23,6 @@ type Counter = Database['public']['Tables']['counters']['Row'];
 interface CurrentTicketProps {
   ticket: Ticket | null;
   counter: Counter;
-  isSpeaking: boolean;
   isProcessing: boolean;
   cooldownRemaining: number;
   nextTickets: Ticket[];
@@ -36,7 +35,6 @@ interface CurrentTicketProps {
 export function CurrentTicket({
   ticket,
   counter,
-  isSpeaking,
   isProcessing,
   cooldownRemaining,
   nextTickets,
