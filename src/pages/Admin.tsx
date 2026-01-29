@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContextREST';
+import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,16 +11,8 @@ import {
   FileText,
   LogOut,
   Shield,
-  ArrowLeft,
-  Tv,
-  ExternalLink
+  ArrowLeft
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { AttendantsTab } from '@/components/admin/AttendantsTab';
 import { CountersTab } from '@/components/admin/CountersTab';
 import { SettingsTab } from '@/components/admin/SettingsTab';
@@ -98,24 +90,6 @@ export default function Admin() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Tv className="h-4 w-4 mr-2" />
-                    Painel TV
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/painel')}>
-                    <Monitor className="h-4 w-4 mr-2" />
-                    Abrir aqui
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.open('/painel', '_blank')}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Abrir em nova aba
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name}
               </span>

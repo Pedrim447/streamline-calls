@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContextREST';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useVoice } from '@/hooks/useVoice';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
@@ -182,8 +182,8 @@ export default function Dashboard() {
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
-      // Voice call happens immediately after ticket is returned, with client name
-      callTicket(ticket.display_code, counter.number, true, ticket.client_name || undefined);
+      // Voice call happens immediately after ticket is returned
+      callTicket(ticket.display_code, counter.number);
     } else {
       // If no ticket was returned (empty queue), we don't need to do anything
       // The toast was already shown by callNextTicket
@@ -199,8 +199,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately
     
-    // Voice first for instant feedback, with client name
-    repeatCallSoft(currentTicket.display_code, counter.number, currentTicket.client_name || undefined);
+    // Voice first for instant feedback
+    repeatCallSoft(currentTicket.display_code, counter.number);
     await repeatCall(currentTicket.id);
     
     setIsProcessing(false);

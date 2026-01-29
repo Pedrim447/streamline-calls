@@ -91,7 +91,7 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     };
   }, []);
 
-  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false, clientName?: string) => {
+  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false) => {
     if (!voiceSettings.enabled) {
       console.log('Voice disabled in settings');
       return;
@@ -121,17 +121,10 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     const ticketNumberSpoken = numberToWords(ticketNumber);
     const counterSpoken = numberToWords(counterNum);
 
-    // Build the message with optional client name
-    let message: string;
-    if (clientName) {
-      // Get first name only for voice announcement
-      const firstName = clientName.split(' ')[0];
-      message = `Atenção ${firstName}. Senha ${ticketTypeSpoken} ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}`;
-    } else {
-      message = voiceSettings.template
-        .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
-        .replace('{counter}', counterSpoken);
-    }
+    // Build the message
+    let message = voiceSettings.template
+      .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
+      .replace('{counter}', counterSpoken);
 
     console.log('Speaking:', message);
 
@@ -236,24 +229,24 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     playNote(659.25, 0.15, 0.7, 0.12);   // E5 - even quieter
   }, []);
 
-  const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true, clientName?: string) => {
+  const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true) => {
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber, false, clientName);
+        speak(ticketCode, counterNumber, false);
       }, 600);
     } else {
-      speak(ticketCode, counterNumber, false, clientName);
+      speak(ticketCode, counterNumber, false);
     }
   }, [speak, playAlertSound]);
 
   // Soft repeat call with gentle chime and calmer voice
-  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string, clientName?: string) => {
+  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string) => {
     playSoftChime();
     // Small delay before soft voice
     setTimeout(() => {
-      speak(ticketCode, counterNumber, true, clientName);
+      speak(ticketCode, counterNumber, true);
     }, 500);
   }, [speak, playSoftChime]);
 
