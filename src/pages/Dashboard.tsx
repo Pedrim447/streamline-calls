@@ -182,8 +182,8 @@ export default function Dashboard() {
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
-      // Voice call happens immediately after ticket is returned
-      callTicket(ticket.display_code, counter.number);
+      // Voice call happens immediately after ticket is returned, with client name
+      callTicket(ticket.display_code, counter.number, true, ticket.client_name || undefined);
     } else {
       // If no ticket was returned (empty queue), we don't need to do anything
       // The toast was already shown by callNextTicket
