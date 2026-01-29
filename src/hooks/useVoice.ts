@@ -91,7 +91,7 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     };
   }, []);
 
-  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false) => {
+  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false, clientName?: string) => {
     if (!voiceSettings.enabled) {
       console.log('Voice disabled in settings');
       return;
@@ -121,10 +121,17 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     const ticketNumberSpoken = numberToWords(ticketNumber);
     const counterSpoken = numberToWords(counterNum);
 
-    // Build the message
-    let message = voiceSettings.template
-      .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
-      .replace('{counter}', counterSpoken);
+    // Build the message with optional client name
+    let message: string;
+    if (clientName) {
+      // Get first name only for voice announcement
+      const firstName = clientName.split(' ')[0];
+      message = `Atenção ${firstName}. Senha ${ticketTypeSpoken} ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}`;
+    } else {
+      message = voiceSettings.template
+        .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
+        .replace('{counter}', counterSpoken);
+    }
 
     console.log('Speaking:', message);
 
