@@ -1,36 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContextREST';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Shield, Clock, Users, Network } from 'lucide-react';
+import { Loader2, Shield, Clock } from 'lucide-react';
 import { z } from 'zod';
 import treLogo from '@/assets/tre-logo.png';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
-const usernameSchema = z.string().min(1, 'Usuário obrigatório');
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading, signIn, signInWithLdap, roles } = useAuth();
+  const { user, isLoading: authLoading, signIn, roles } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPageLoaded, setIsPageLoaded] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [authMethod, setAuthMethod] = useState<'local' | 'ldap'>('ldap');
   
-  // Login form - local
+  // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  
-  // Login form - LDAP
-  const [ldapUsername, setLdapUsername] = useState('');
-  const [ldapPassword, setLdapPassword] = useState('');
 
   useEffect(() => {
     // Trigger page load animation
@@ -48,7 +41,7 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate, roles]);
 
-  const handleLocalLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -60,32 +53,11 @@ export default function Auth() {
       const { error } = await signIn(loginEmail, loginPassword);
       
       if (error) {
-        setError(error.message || 'Erro ao fazer login');
-        setIsLoading(false);
-      }
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        setError(err.errors[0].message);
-      } else {
-        setError('Erro ao fazer login');
-      }
-      setIsLoading(false);
-    }
-  };
-
-  const handleLdapLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      usernameSchema.parse(ldapUsername);
-      passwordSchema.parse(ldapPassword);
-
-      const { error } = await signInWithLdap(ldapUsername, ldapPassword);
-      
-      if (error) {
-        setError(error.message || 'Erro na autenticação LDAP');
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Email ou senha incorretos');
+        } else {
+          setError(error.message);
+        }
         setIsLoading(false);
       }
     } catch (err) {
@@ -101,8 +73,6 @@ export default function Auth() {
   const features = [
     { icon: Shield, label: 'Seguro' },
     { icon: Clock, label: 'Controle de Fila' },
-    { icon: Users, label: 'Multiusuário' },
-    { icon: Network, label: 'Integrado ao AD' },
   ];
 
   if (authLoading) {
@@ -141,12 +111,12 @@ export default function Auth() {
       <div className={`flex flex-col items-center space-y-6 mb-8 transition-all duration-1000 delay-300 ${isPageLoaded ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}`}>
         {/* Logo */}
         <div className={`transition-all duration-1000 delay-200 ${isPageLoaded ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-          <div className="relative w-28 h-28">
+          <div className="relative w-32 h-32">
             <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
             <img 
               src={treLogo} 
               alt="TRE-MA Logo" 
-              className="w-28 h-28 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
+              className="w-32 h-32 object-contain relative z-10 drop-shadow-xl hover:scale-110 transition-transform duration-300"
             />
           </div>
         </div>
@@ -161,7 +131,7 @@ export default function Auth() {
         </div>
 
         {/* Features - horizontal layout */}
-        <div className="flex justify-center gap-6 mt-4">
+        <div className="flex justify-center gap-8 mt-4">
           {features.map((feature, index) => (
             <div 
               key={feature.label}
@@ -169,7 +139,7 @@ export default function Auth() {
               style={{ transitionDelay: `${600 + index * 100}ms` }}
             >
               <div className="p-2 rounded-xl group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
-                <feature.icon className="h-5 w-5 text-primary group-hover:text-primary transition-colors duration-300" />
+                <feature.icon className="h-6 w-6 text-primary group-hover:text-primary transition-colors duration-300" />
               </div>
               <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors duration-300">{feature.label}</span>
             </div>
@@ -177,13 +147,13 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Login Card */}
+      {/* Login Card - taller and narrower */}
       <div className={`w-full max-w-md transition-all duration-1000 delay-500 ${isPageLoaded ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-95'}`}>
         <div className="bg-card backdrop-blur-xl rounded-2xl shadow-2xl border border-border overflow-hidden">
           {/* Card header with gradient */}
           <div className="h-2 bg-gradient-to-r from-primary via-accent to-primary" />
           
-          <div className="px-8 py-6 space-y-5">
+          <form onSubmit={handleLogin} className="px-8 py-6 space-y-5">
             <div className="text-center space-y-1">
               <h2 className="text-xl font-semibold text-foreground">Acesso ao Sistema</h2>
               <p className="text-sm text-muted-foreground">Entre com suas credenciais</p>
@@ -195,142 +165,60 @@ export default function Auth() {
               </Alert>
             )}
 
-            <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v as 'local' | 'ldap')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="ldap" className="gap-2">
-                  <Network className="h-4 w-4" />
-                  Rede (AD)
-                </TabsTrigger>
-                <TabsTrigger value="local" className="gap-2">
-                  <Shield className="h-4 w-4" />
-                  Local
-                </TabsTrigger>
-              </TabsList>
-
-              {/* LDAP Login */}
-              <TabsContent value="ldap">
-                <form onSubmit={handleLdapLogin} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ldap-username" className="text-sm font-medium">Usuário de Rede</Label>
-                    <div className="relative group">
-                      <Input
-                        id="ldap-username"
-                        type="text"
-                        placeholder="joao.silva"
-                        value={ldapUsername}
-                        onChange={(e) => setLdapUsername(e.target.value)}
-                        disabled={isLoading}
-                        required
-                        autoComplete="username"
-                        className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Use seu login do Windows/Active Directory</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="ldap-password" className="text-sm font-medium">Senha de Rede</Label>
-                    <div className="relative group">
-                      <Input
-                        id="ldap-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={ldapPassword}
-                        onChange={(e) => setLdapPassword(e.target.value)}
-                        disabled={isLoading}
-                        required
-                        autoComplete="current-password"
-                        className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
-                      />
-                    </div>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 text-sm font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
+                <div className="relative group">
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
                     disabled={isLoading}
-                  >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          Autenticando...
-                        </>
-                      ) : (
-                        <>
-                          <Network className="h-4 w-4" />
-                          Entrar com Rede
-                        </>
-                      )}
-                    </span>
-                  </Button>
-                </form>
-              </TabsContent>
+                    required
+                    className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
+                  />
+                  <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+              </div>
 
-              {/* Local Login */}
-              <TabsContent value="local">
-                <form onSubmit={handleLocalLogin} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
-                    <div className="relative group">
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={loginEmail}
-                        onChange={(e) => setLoginEmail(e.target.value)}
-                        disabled={isLoading}
-                        required
-                        autoComplete="email"
-                        className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
-                    <div className="relative group">
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        disabled={isLoading}
-                        required
-                        autoComplete="current-password"
-                        className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
-                      />
-                    </div>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 text-sm font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
+              <div className="space-y-2">
+                <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
+                <div className="relative group">
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     disabled={isLoading}
-                  >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          Entrando...
-                        </>
-                      ) : (
-                        'Entrar'
-                      )}
-                    </span>
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+                    required
+                    className="h-11 text-sm pl-4 pr-4 bg-background/50 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300 group-hover:border-primary/50"
+                  />
+                  <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                </div>
+              </div>
+            </div>
 
-        {/* API Status indicator */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            Conectando a: <code className="bg-muted px-1 py-0.5 rounded text-xs">{import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}</code>
-          </p>
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-sm font-semibold relative overflow-hidden group transition-all duration-300 hover:shadow-lg hover:shadow-primary/25" 
+              disabled={isLoading}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </Button>
+          </form>
         </div>
       </div>
 
