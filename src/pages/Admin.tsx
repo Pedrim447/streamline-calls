@@ -11,8 +11,16 @@ import {
   FileText,
   LogOut,
   Shield,
-  ArrowLeft
+  ArrowLeft,
+  Tv,
+  ExternalLink
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { AttendantsTab } from '@/components/admin/AttendantsTab';
 import { CountersTab } from '@/components/admin/CountersTab';
 import { SettingsTab } from '@/components/admin/SettingsTab';
