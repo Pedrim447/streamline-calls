@@ -48,9 +48,16 @@ export function TicketQueue({ tickets, isLoading }: TicketQueueProps) {
       </CardHeader>
       <CardContent>
         {tickets.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Nenhuma senha na fila</p>
+          <div className="text-center py-8">
+            <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-6 border border-amber-200 dark:border-amber-800">
+              <Users className="h-12 w-12 mx-auto mb-3 text-amber-600 dark:text-amber-400" />
+              <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                Fila Vazia - 0 pessoas
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Aguarde a recepção entregar novas senhas para chamar
+              </p>
+            </div>
           </div>
         ) : (
           <ScrollArea className="h-[300px]">
