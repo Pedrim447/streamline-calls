@@ -375,7 +375,6 @@ export default function Dashboard() {
               <CurrentTicket 
                 ticket={currentTicket}
                 counter={counter}
-                isSpeaking={isSpeaking}
                 isProcessing={isProcessing}
                 cooldownRemaining={cooldownRemaining}
                 nextTickets={waitingTickets.slice(0, 5)}
