@@ -191,9 +191,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately
     
-    // Voice first for instant feedback
-    repeatCallSoft(currentTicket.display_code, counter.number);
     await repeatCall(currentTicket.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
