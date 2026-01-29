@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
-import { useVoice } from '@/hooks/useVoice';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,6 @@ export default function Dashboard() {
     realtime: true 
   });
 
-  const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
   const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s
   // Redirect if not authenticated
   useEffect(() => {
@@ -179,15 +177,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately for faster UX
     
-    const ticket = await callNextTicket(counter.id);
-    
-    if (ticket && counter) {
-      // Voice call happens immediately after ticket is returned
-      callTicket(ticket.display_code, counter.number);
-    } else {
-      // If no ticket was returned (empty queue), we don't need to do anything
-      // The toast was already shown by callNextTicket
-    }
+    await callNextTicket(counter.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
@@ -199,9 +190,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately
     
-    // Voice first for instant feedback
-    repeatCallSoft(currentTicket.display_code, counter.number);
     await repeatCall(currentTicket.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
@@ -385,7 +375,6 @@ export default function Dashboard() {
               <CurrentTicket 
                 ticket={currentTicket}
                 counter={counter}
-                isSpeaking={isSpeaking}
                 isProcessing={isProcessing}
                 cooldownRemaining={cooldownRemaining}
                 nextTickets={waitingTickets.slice(0, 5)}
@@ -437,7 +426,7 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={handleRepeatCall}
-                        disabled={isProcessing || isSpeaking || cooldownRemaining > 0}
+                        disabled={isProcessing || cooldownRemaining > 0}
                       >
                         <Volume2 className="h-4 w-4 mr-2" />
                         {cooldownRemaining > 0 ? `${cooldownRemaining}s` : 'Repetir'}

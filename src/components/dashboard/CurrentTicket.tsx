@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
   Ticket as TicketIcon, 
-  Volume2, 
   Play, 
   CheckCircle, 
   SkipForward,
   Clock,
   Loader2,
   Users,
-  ArrowRight
+  ArrowRight,
+  Volume2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,7 +23,6 @@ type Counter = Database['public']['Tables']['counters']['Row'];
 interface CurrentTicketProps {
   ticket: Ticket | null;
   counter: Counter;
-  isSpeaking: boolean;
   isProcessing: boolean;
   cooldownRemaining: number;
   nextTickets: Ticket[];
@@ -36,7 +35,6 @@ interface CurrentTicketProps {
 export function CurrentTicket({
   ticket,
   counter,
-  isSpeaking,
   isProcessing,
   cooldownRemaining,
   nextTickets,
@@ -133,14 +131,6 @@ export function CurrentTicket({
               </span>
             </div>
 
-            {/* Speaking Indicator */}
-            {isSpeaking && (
-              <div className="flex items-center justify-center gap-3 py-4 bg-primary/10 rounded-lg animate-pulse">
-                <Volume2 className="h-6 w-6 text-primary" />
-                <span className="text-lg font-semibold text-primary">Chamando a senha...</span>
-              </div>
-            )}
-
             {/* Cooldown Progress */}
             {isCooldownActive && (
               <div className="space-y-2">
@@ -157,14 +147,10 @@ export function CurrentTicket({
               <Button 
                 variant="outline" 
                 onClick={onRepeatCall}
-                disabled={isProcessing || isSpeaking || isCooldownActive}
+                disabled={isProcessing || isCooldownActive}
                 className="h-14 text-base"
               >
-                {isSpeaking ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                ) : (
-                  <Volume2 className="h-5 w-5 mr-2" />
-                )}
+                <Volume2 className="h-5 w-5 mr-2" />
                 {isCooldownActive ? `Aguarde ${cooldownRemaining}s` : 'Repetir Chamada'}
               </Button>
               
