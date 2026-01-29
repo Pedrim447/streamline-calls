@@ -218,6 +218,27 @@ export default function Auth() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Button>
+
+            {/* Divider */}
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+
+            {/* Public Panel Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 text-sm font-medium gap-2 hover:bg-accent/50 transition-all duration-300"
+              onClick={() => navigate('/painel')}
+            >
+              <Tv className="h-4 w-4" />
+              Abrir Painel Público (TV)
+            </Button>
           </form>
         </div>
       </div>
