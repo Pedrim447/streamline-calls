@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
   Ticket as TicketIcon, 
-  Volume2, 
   Play, 
   CheckCircle, 
   SkipForward,
   Clock,
   Loader2,
   Users,
-  ArrowRight
+  ArrowRight,
+  Volume2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

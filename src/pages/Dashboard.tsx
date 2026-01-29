@@ -426,7 +426,7 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={handleRepeatCall}
-                        disabled={isProcessing || isSpeaking || cooldownRemaining > 0}
+                        disabled={isProcessing || cooldownRemaining > 0}
                       >
                         <Volume2 className="h-4 w-4 mr-2" />
                         {cooldownRemaining > 0 ? `${cooldownRemaining}s` : 'Repetir'}
