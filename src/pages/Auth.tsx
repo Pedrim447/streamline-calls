@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Shield, Clock } from 'lucide-react';
+import { Loader2, Shield, Clock, Tv } from 'lucide-react';
 import { z } from 'zod';
 import treLogo from '@/assets/tre-logo.png';
 
