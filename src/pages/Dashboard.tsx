@@ -178,15 +178,8 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately for faster UX
     
-    const ticket = await callNextTicket(counter.id);
-    
-    if (ticket && counter) {
-      // Voice call happens immediately after ticket is returned
-      callTicket(ticket.display_code, counter.number);
-    } else {
-      // If no ticket was returned (empty queue), we don't need to do anything
-      // The toast was already shown by callNextTicket
-    }
+    await callNextTicket(counter.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
