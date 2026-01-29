@@ -98,6 +98,24 @@ export default function Admin() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Tv className="h-4 w-4 mr-2" />
+                    Painel TV
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate('/painel')}>
+                    <Monitor className="h-4 w-4 mr-2" />
+                    Abrir aqui
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open('/painel', '_blank')}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Abrir em nova aba
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name}
               </span>
