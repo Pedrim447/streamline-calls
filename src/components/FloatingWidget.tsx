@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextREST';
 import { useTickets } from '@/hooks/useTickets';
 import { useVoice } from '@/hooks/useVoice';
 import { supabase } from '@/integrations/supabase/client';
