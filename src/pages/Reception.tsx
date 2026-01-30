@@ -145,7 +145,6 @@ export default function Reception() {
           unit_id: unitId,
           ticket_type: ticketType,
           client_name: clientName.trim(),
-          client_cpf: clientCpf.replace(/\D/g, ''),
         },
       });
 
