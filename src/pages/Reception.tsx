@@ -50,7 +50,6 @@ export default function Reception() {
   
   // Form state
   const [clientName, setClientName] = useState('');
-  const [clientCpf, setClientCpf] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
   
   
