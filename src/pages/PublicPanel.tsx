@@ -351,9 +351,9 @@ export default function PublicPanel() {
                     opacity: 1 - (index * 0.15),
                   }}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col">
                     <span 
-                      className={`text-3xl font-bold ${
+                      className={`text-2xl font-bold ${
                         ticket.ticket_type === 'preferential'
                           ? 'text-amber-400'
                           : 'text-emerald-400'
@@ -361,6 +361,11 @@ export default function PublicPanel() {
                     >
                       {ticket.display_code}
                     </span>
+                    {ticket.client_name && (
+                      <span className="text-sm text-white/60">
+                        {getMaskedName(ticket.client_name)}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white/90">
