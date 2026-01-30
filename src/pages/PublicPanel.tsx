@@ -200,6 +200,19 @@ export default function PublicPanel() {
     return '-';
   };
 
+  // Mask client name: "João Silva Santos" -> "João S."
+  const getMaskedName = (name: string | null): string => {
+    if (!name || name.trim().length === 0) return '';
+    
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    
+    const firstName = parts[0];
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    
+    return `${firstName} ${lastInitial}.`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Header */}
