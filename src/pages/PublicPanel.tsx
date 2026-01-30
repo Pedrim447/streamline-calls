@@ -123,18 +123,38 @@ export default function PublicPanel() {
     };
   }, [counters, callTicket]);
 
-  const handleNewCall = useCallback((updatedTicket: Ticket) => {
+  const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
+    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
+    
+    // Fetch counter info if not in cache
+    let counter = updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined;
+    
+    if (!counter && updatedTicket.counter_id) {
+      console.log('[PublicPanel] Counter not in cache, fetching...');
+      const { data } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('id', updatedTicket.counter_id)
+        .single();
+      
+      if (data) {
+        counter = data;
+        setCounters(prev => ({ ...prev, [data.id]: data }));
+      }
+    }
+    
     const ticketWithCounter: TicketWithCounter = {
       ...updatedTicket,
-      counter: updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined,
+      counter,
     };
     
     setIsAnimating(true);
     setCurrentTicket(ticketWithCounter);
     
     // Play voice announcement
-    if (ticketWithCounter.counter) {
-      callTicket(updatedTicket.display_code, ticketWithCounter.counter.number);
+    if (counter) {
+      console.log('[PublicPanel] Playing voice for counter:', counter.number);
+      callTicket(updatedTicket.display_code, counter.number);
     }
     
     // Move previous current to history
@@ -144,7 +164,6 @@ export default function PublicPanel() {
     });
     
     setTimeout(() => setIsAnimating(false), 2000);
-  }, [counters, callTicket]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
