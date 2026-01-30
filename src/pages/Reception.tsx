@@ -133,11 +133,6 @@ export default function Reception() {
       toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
       return;
     }
-    
-    if (clientCpf.replace(/\D/g, '').length !== 11) {
-      toast.error('Por favor, informe um CPF válido');
-      return;
-    }
 
     setIsCreating(true);
 
