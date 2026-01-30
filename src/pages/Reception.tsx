@@ -154,7 +154,6 @@ export default function Reception() {
         setCreatedTicket(data.ticket);
         setShowTicketDialog(true);
         setClientName('');
-        setClientCpf('');
         setTicketType('normal');
         toast.success('Senha gerada com sucesso!');
       }
