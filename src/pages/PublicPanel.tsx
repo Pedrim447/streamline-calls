@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
@@ -21,8 +21,15 @@ export default function PublicPanel() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  const countersRef = useRef<Record<string, Counter>>({});
   const { callTicket } = useVoice();
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    countersRef.current = counters;
+  }, [counters]);
 
   // Update clock every second
   useEffect(() => {
@@ -32,66 +39,109 @@ export default function PublicPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch counters for display
-  const fetchCounters = useCallback(async () => {
-    console.log('[PublicPanel] Fetching counters...');
-    const { data, error } = await supabase.from('counters').select('*');
-    if (error) {
-      console.error('[PublicPanel] Error fetching counters:', error);
-      return;
-    }
-    if (data) {
-      console.log('[PublicPanel] Counters loaded:', data.length);
-      const counterMap: Record<string, Counter> = {};
-      data.forEach(c => { counterMap[c.id] = c; });
-      setCounters(counterMap);
-    }
+  // Initial data load - run once on mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      console.log('[PublicPanel] Loading initial data...');
+      
+      // Fetch counters
+      const { data: counterData, error: counterError } = await supabase
+        .from('counters')
+        .select('*');
+      
+      if (counterError) {
+        console.error('[PublicPanel] Error fetching counters:', counterError);
+      }
+      
+      let counterMap: Record<string, Counter> = {};
+      if (counterData) {
+        console.log('[PublicPanel] Counters loaded:', counterData.length);
+        counterData.forEach(c => { counterMap[c.id] = c; });
+        setCounters(counterMap);
+        countersRef.current = counterMap;
+      }
+
+      // Fetch recent tickets
+      const { data: ticketData, error: ticketError } = await supabase
+        .from('tickets')
+        .select('*')
+        .in('status', ['called', 'in_service'])
+        .not('called_at', 'is', null)
+        .order('called_at', { ascending: false })
+        .limit(6);
+
+      if (ticketError) {
+        console.error('[PublicPanel] Error fetching tickets:', ticketError);
+      }
+
+      console.log('[PublicPanel] Tickets loaded:', ticketData?.length || 0);
+      
+      if (ticketData && ticketData.length > 0) {
+        const ticketsWithCounters = ticketData.map(ticket => ({
+          ...ticket,
+          counter: ticket.counter_id ? counterMap[ticket.counter_id] : undefined,
+        }));
+        
+        setCurrentTicket(ticketsWithCounters[0]);
+        setLastCalls(ticketsWithCounters.slice(1, 6));
+      }
+      
+      setIsLoading(false);
+      setIsInitialized(true);
+    };
+
+    loadInitialData();
   }, []);
 
-  // Fetch recent called tickets - without unit_id filter for public panel
-  const fetchRecentCalls = useCallback(async () => {
-    console.log('[PublicPanel] Fetching recent calls...');
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .in('status', ['called', 'in_service'])
-      .not('called_at', 'is', null)
-      .order('called_at', { ascending: false })
-      .limit(6);
-
-    if (error) {
-      console.error('[PublicPanel] Error fetching tickets:', error);
-      setIsLoading(false);
-      return;
-    }
-
-    console.log('[PublicPanel] Tickets loaded:', data?.length || 0);
+  // Handle new call - use ref to avoid dependency issues
+  const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
+    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
     
-    if (data && data.length > 0) {
-      const ticketsWithCounters = data.map(ticket => ({
-        ...ticket,
-        counter: ticket.counter_id ? counters[ticket.counter_id] : undefined,
-      }));
+    // Fetch counter info using ref
+    let counter = updatedTicket.counter_id ? countersRef.current[updatedTicket.counter_id] : undefined;
+    
+    if (!counter && updatedTicket.counter_id) {
+      console.log('[PublicPanel] Counter not in cache, fetching...');
+      const { data } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('id', updatedTicket.counter_id)
+        .single();
       
-      setCurrentTicket(ticketsWithCounters[0]);
-      setLastCalls(ticketsWithCounters.slice(1, 6));
+      if (data) {
+        counter = data;
+        countersRef.current[data.id] = data;
+        setCounters(prev => ({ ...prev, [data.id]: data }));
+      }
     }
-    setIsLoading(false);
-  }, [counters]);
-
-  // Initial data load
-  useEffect(() => {
-    fetchCounters();
-  }, [fetchCounters]);
-
-  useEffect(() => {
-    if (Object.keys(counters).length > 0) {
-      fetchRecentCalls();
+    
+    const ticketWithCounter: TicketWithCounter = {
+      ...updatedTicket,
+      counter,
+    };
+    
+    setIsAnimating(true);
+    setCurrentTicket(ticketWithCounter);
+    
+    // Play voice announcement
+    if (counter) {
+      console.log('[PublicPanel] Playing voice for counter:', counter.number);
+      callTicket(updatedTicket.display_code, counter.number);
     }
-  }, [counters, fetchRecentCalls]);
+    
+    // Move previous current to history
+    setLastCalls(prev => {
+      const filtered = prev.filter(t => t.id !== updatedTicket.id);
+      return filtered.slice(0, 4);
+    });
+    
+    setTimeout(() => setIsAnimating(false), 2000);
+  }, [callTicket]);
 
-  // Subscribe to real-time updates - listen to all ticket changes
+  // Subscribe to real-time updates - only after initialized
   useEffect(() => {
+    if (!isInitialized) return;
+    
     console.log('[PublicPanel] Setting up realtime subscription...');
     
     const channel = supabase
@@ -121,7 +171,7 @@ export default function PublicPanel() {
       console.log('[PublicPanel] Cleaning up realtime...');
       supabase.removeChannel(channel);
     };
-  }, [counters, callTicket]);
+  }, [isInitialized, handleNewCall]);
 
   const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
     console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
