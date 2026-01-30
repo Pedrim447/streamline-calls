@@ -280,6 +280,15 @@ export default function PublicPanel() {
                 )}
               </div>
 
+              {/* Client Name - Masked */}
+              {currentTicket.client_name && (
+                <div className="mt-4">
+                  <span className="text-3xl md:text-4xl text-white/80 font-medium">
+                    {getMaskedName(currentTicket.client_name)}
+                  </span>
+                </div>
+              )}
+
               {/* Counter Number */}
               <div className="mt-8 flex items-center justify-center gap-4">
                 <span className="text-4xl md:text-6xl text-white/60">Guichê</span>
