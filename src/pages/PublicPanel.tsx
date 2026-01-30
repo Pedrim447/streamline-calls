@@ -20,6 +20,7 @@ export default function PublicPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const { callTicket } = useVoice();
 
@@ -33,24 +34,39 @@ export default function PublicPanel() {
 
   // Fetch counters for display
   const fetchCounters = useCallback(async () => {
-    const { data } = await supabase.from('counters').select('*');
+    console.log('[PublicPanel] Fetching counters...');
+    const { data, error } = await supabase.from('counters').select('*');
+    if (error) {
+      console.error('[PublicPanel] Error fetching counters:', error);
+      return;
+    }
     if (data) {
+      console.log('[PublicPanel] Counters loaded:', data.length);
       const counterMap: Record<string, Counter> = {};
       data.forEach(c => { counterMap[c.id] = c; });
       setCounters(counterMap);
     }
   }, []);
 
-  // Fetch recent called tickets
+  // Fetch recent called tickets - without unit_id filter for public panel
   const fetchRecentCalls = useCallback(async () => {
-    const { data } = await supabase
+    console.log('[PublicPanel] Fetching recent calls...');
+    const { data, error } = await supabase
       .from('tickets')
       .select('*')
-      .in('status', ['called', 'in_service', 'completed'])
+      .in('status', ['called', 'in_service'])
       .not('called_at', 'is', null)
       .order('called_at', { ascending: false })
       .limit(6);
 
+    if (error) {
+      console.error('[PublicPanel] Error fetching tickets:', error);
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('[PublicPanel] Tickets loaded:', data?.length || 0);
+    
     if (data && data.length > 0) {
       const ticketsWithCounters = data.map(ticket => ({
         ...ticket,
@@ -60,8 +76,10 @@ export default function PublicPanel() {
       setCurrentTicket(ticketsWithCounters[0]);
       setLastCalls(ticketsWithCounters.slice(1, 6));
     }
+    setIsLoading(false);
   }, [counters]);
 
+  // Initial data load
   useEffect(() => {
     fetchCounters();
   }, [fetchCounters]);
@@ -72,14 +90,12 @@ export default function PublicPanel() {
     }
   }, [counters, fetchRecentCalls]);
 
-  // Subscribe to real-time updates with broadcast for instant response
+  // Subscribe to real-time updates - listen to all ticket changes
   useEffect(() => {
+    console.log('[PublicPanel] Setting up realtime subscription...');
+    
     const channel = supabase
-      .channel('public-panel-realtime', {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel('public-panel-tickets')
       .on(
         'postgres_changes',
         {
@@ -88,6 +104,7 @@ export default function PublicPanel() {
           table: 'tickets',
         },
         (payload) => {
+          console.log('[PublicPanel] Ticket updated:', payload);
           const updatedTicket = payload.new as Ticket;
           
           // If a ticket was just called, trigger animation and voice
@@ -96,34 +113,48 @@ export default function PublicPanel() {
           }
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
-        // Instant response from broadcast (faster than DB propagation)
-        console.log('[PublicPanel] Broadcast received:', payload);
-        if (payload?.ticket && payload.ticket.status === 'called') {
-          handleNewCall(payload.ticket);
-        }
-      })
       .subscribe((status) => {
-        console.log('[PublicPanel] Subscription status:', status);
+        console.log('[PublicPanel] Realtime status:', status);
       });
 
     return () => {
+      console.log('[PublicPanel] Cleaning up realtime...');
       supabase.removeChannel(channel);
     };
   }, [counters, callTicket]);
 
-  const handleNewCall = useCallback((updatedTicket: Ticket) => {
+  const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
+    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
+    
+    // Fetch counter info if not in cache
+    let counter = updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined;
+    
+    if (!counter && updatedTicket.counter_id) {
+      console.log('[PublicPanel] Counter not in cache, fetching...');
+      const { data } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('id', updatedTicket.counter_id)
+        .single();
+      
+      if (data) {
+        counter = data;
+        setCounters(prev => ({ ...prev, [data.id]: data }));
+      }
+    }
+    
     const ticketWithCounter: TicketWithCounter = {
       ...updatedTicket,
-      counter: updatedTicket.counter_id ? counters[updatedTicket.counter_id] : undefined,
+      counter,
     };
     
     setIsAnimating(true);
     setCurrentTicket(ticketWithCounter);
     
     // Play voice announcement
-    if (ticketWithCounter.counter) {
-      callTicket(updatedTicket.display_code, ticketWithCounter.counter.number);
+    if (counter) {
+      console.log('[PublicPanel] Playing voice for counter:', counter.number);
+      callTicket(updatedTicket.display_code, counter.number);
     }
     
     // Move previous current to history
