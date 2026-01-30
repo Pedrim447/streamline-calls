@@ -90,14 +90,12 @@ export default function PublicPanel() {
     }
   }, [counters, fetchRecentCalls]);
 
-  // Subscribe to real-time updates with broadcast for instant response
+  // Subscribe to real-time updates - listen to all ticket changes
   useEffect(() => {
+    console.log('[PublicPanel] Setting up realtime subscription...');
+    
     const channel = supabase
-      .channel('public-panel-realtime', {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel('public-panel-tickets')
       .on(
         'postgres_changes',
         {
@@ -106,6 +104,7 @@ export default function PublicPanel() {
           table: 'tickets',
         },
         (payload) => {
+          console.log('[PublicPanel] Ticket updated:', payload);
           const updatedTicket = payload.new as Ticket;
           
           // If a ticket was just called, trigger animation and voice
@@ -114,18 +113,12 @@ export default function PublicPanel() {
           }
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
-        // Instant response from broadcast (faster than DB propagation)
-        console.log('[PublicPanel] Broadcast received:', payload);
-        if (payload?.ticket && payload.ticket.status === 'called') {
-          handleNewCall(payload.ticket);
-        }
-      })
       .subscribe((status) => {
-        console.log('[PublicPanel] Subscription status:', status);
+        console.log('[PublicPanel] Realtime status:', status);
       });
 
     return () => {
+      console.log('[PublicPanel] Cleaning up realtime...');
       supabase.removeChannel(channel);
     };
   }, [counters, callTicket]);
