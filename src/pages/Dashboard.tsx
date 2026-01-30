@@ -234,6 +234,54 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
+  const handleManualCall = async (ticketNumber: number, ticketType: 'normal' | 'preferential') => {
+    if (!counter || !user?.id) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await supabase.functions.invoke('manual-call-ticket', {
+        body: {
+          unit_id: profile?.unit_id || DEFAULT_UNIT_ID,
+          ticket_number: ticketNumber,
+          ticket_type: ticketType,
+          counter_id: counter.id,
+          attendant_id: user.id,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        toast({
+          title: 'Erro',
+          description: response.data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: `Senha ${ticketType === 'preferential' ? 'P' : 'N'}-${ticketNumber.toString().padStart(3, '0')} chamada com sucesso`,
+      });
+      
+      setIsManualCallDialogOpen(false);
+      startCooldown();
+    } catch (error) {
+      console.error('Error calling manual ticket:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao chamar senha manualmente',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleLogout = async () => {
     // Release the counter before logging out
     if (counter) {
