@@ -20,6 +20,7 @@ export default function PublicPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const { callTicket } = useVoice();
 
@@ -33,24 +34,39 @@ export default function PublicPanel() {
 
   // Fetch counters for display
   const fetchCounters = useCallback(async () => {
-    const { data } = await supabase.from('counters').select('*');
+    console.log('[PublicPanel] Fetching counters...');
+    const { data, error } = await supabase.from('counters').select('*');
+    if (error) {
+      console.error('[PublicPanel] Error fetching counters:', error);
+      return;
+    }
     if (data) {
+      console.log('[PublicPanel] Counters loaded:', data.length);
       const counterMap: Record<string, Counter> = {};
       data.forEach(c => { counterMap[c.id] = c; });
       setCounters(counterMap);
     }
   }, []);
 
-  // Fetch recent called tickets
+  // Fetch recent called tickets - without unit_id filter for public panel
   const fetchRecentCalls = useCallback(async () => {
-    const { data } = await supabase
+    console.log('[PublicPanel] Fetching recent calls...');
+    const { data, error } = await supabase
       .from('tickets')
       .select('*')
-      .in('status', ['called', 'in_service', 'completed'])
+      .in('status', ['called', 'in_service'])
       .not('called_at', 'is', null)
       .order('called_at', { ascending: false })
       .limit(6);
 
+    if (error) {
+      console.error('[PublicPanel] Error fetching tickets:', error);
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('[PublicPanel] Tickets loaded:', data?.length || 0);
+    
     if (data && data.length > 0) {
       const ticketsWithCounters = data.map(ticket => ({
         ...ticket,
@@ -60,8 +76,10 @@ export default function PublicPanel() {
       setCurrentTicket(ticketsWithCounters[0]);
       setLastCalls(ticketsWithCounters.slice(1, 6));
     }
+    setIsLoading(false);
   }, [counters]);
 
+  // Initial data load
   useEffect(() => {
     fetchCounters();
   }, [fetchCounters]);
