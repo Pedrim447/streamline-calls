@@ -200,17 +200,10 @@ export default function PublicPanel() {
     return '-';
   };
 
-  // Mask client name: "João Silva Santos" -> "João S."
-  const getMaskedName = (name: string | null): string => {
+  // Format client name for display (capitalize properly)
+  const formatClientName = (name: string | null): string => {
     if (!name || name.trim().length === 0) return '';
-    
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    
-    const firstName = parts[0];
-    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
-    
-    return `${firstName} ${lastInitial}.`;
+    return name.trim();
   };
 
   return (
@@ -280,11 +273,11 @@ export default function PublicPanel() {
                 )}
               </div>
 
-              {/* Client Name - Masked */}
+              {/* Client Name */}
               {currentTicket.client_name && (
                 <div className="mt-4">
                   <span className="text-3xl md:text-4xl text-white/80 font-medium">
-                    {getMaskedName(currentTicket.client_name)}
+                    {formatClientName(currentTicket.client_name)}
                   </span>
                 </div>
               )}
@@ -363,7 +356,7 @@ export default function PublicPanel() {
                     </span>
                     {ticket.client_name && (
                       <span className="text-sm text-white/60">
-                        {getMaskedName(ticket.client_name)}
+                        {formatClientName(ticket.client_name)}
                       </span>
                     )}
                   </div>

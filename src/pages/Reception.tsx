@@ -50,7 +50,6 @@ export default function Reception() {
   
   // Form state
   const [clientName, setClientName] = useState('');
-  const [clientCpf, setClientCpf] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
   
   
@@ -119,18 +118,6 @@ export default function Reception() {
     };
   }, [profile?.unit_id, user?.id]);
 
-  const formatCpf = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setClientCpf(formatCpf(e.target.value));
-  };
 
   const handleCreateTicket = async () => {
     const trimmedName = clientName.trim();
@@ -146,11 +133,6 @@ export default function Reception() {
       toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
       return;
     }
-    
-    if (clientCpf.replace(/\D/g, '').length !== 11) {
-      toast.error('Por favor, informe um CPF válido');
-      return;
-    }
 
     setIsCreating(true);
 
@@ -163,7 +145,6 @@ export default function Reception() {
           unit_id: unitId,
           ticket_type: ticketType,
           client_name: clientName.trim(),
-          client_cpf: clientCpf.replace(/\D/g, ''),
         },
       });
 
@@ -173,7 +154,6 @@ export default function Reception() {
         setCreatedTicket(data.ticket);
         setShowTicketDialog(true);
         setClientName('');
-        setClientCpf('');
         setTicketType('normal');
         toast.success('Senha gerada com sucesso!');
       }
@@ -373,27 +353,14 @@ export default function Reception() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
-                <Input
-                  id="clientName"
-                  placeholder="Digite o nome completo"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="clientCpf">CPF *</Label>
-                <Input
-                  id="clientCpf"
-                  placeholder="000.000.000-00"
-                  value={clientCpf}
-                  onChange={handleCpfChange}
-                  maxLength={14}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
+              <Input
+                id="clientName"
+                placeholder="Digite o nome completo"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">
