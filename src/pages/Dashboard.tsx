@@ -3,7 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
+import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +18,12 @@ import {
   SkipForward, 
   LogOut,
   Volume2,
-  Users,
   Clock,
   RefreshCw,
   Shield,
   ExternalLink,
-  Monitor
+  Monitor,
+  Hash
 } from 'lucide-react';
 import {
   Select,
@@ -34,6 +36,7 @@ import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
+import { ManualCallDialog } from '@/components/dashboard/ManualCallDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type Counter = Database['public']['Tables']['counters']['Row'];
