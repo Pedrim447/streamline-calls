@@ -273,11 +273,11 @@ export default function PublicPanel() {
                 )}
               </div>
 
-              {/* Client Name - Masked */}
+              {/* Client Name */}
               {currentTicket.client_name && (
                 <div className="mt-4">
                   <span className="text-3xl md:text-4xl text-white/80 font-medium">
-                    {getMaskedName(currentTicket.client_name)}
+                    {formatClientName(currentTicket.client_name)}
                   </span>
                 </div>
               )}
