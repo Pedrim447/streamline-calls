@@ -118,18 +118,6 @@ export default function Reception() {
     };
   }, [profile?.unit_id, user?.id]);
 
-  const formatCpf = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setClientCpf(formatCpf(e.target.value));
-  };
 
   const handleCreateTicket = async () => {
     const trimmedName = clientName.trim();
