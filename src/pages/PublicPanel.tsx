@@ -200,6 +200,19 @@ export default function PublicPanel() {
     return '-';
   };
 
+  // Mask client name: "João Silva Santos" -> "João S."
+  const getMaskedName = (name: string | null): string => {
+    if (!name || name.trim().length === 0) return '';
+    
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    
+    const firstName = parts[0];
+    const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+    
+    return `${firstName} ${lastInitial}.`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Header */}
@@ -267,6 +280,15 @@ export default function PublicPanel() {
                 )}
               </div>
 
+              {/* Client Name - Masked */}
+              {currentTicket.client_name && (
+                <div className="mt-4">
+                  <span className="text-3xl md:text-4xl text-white/80 font-medium">
+                    {getMaskedName(currentTicket.client_name)}
+                  </span>
+                </div>
+              )}
+
               {/* Counter Number */}
               <div className="mt-8 flex items-center justify-center gap-4">
                 <span className="text-4xl md:text-6xl text-white/60">Guichê</span>
@@ -329,9 +351,9 @@ export default function PublicPanel() {
                     opacity: 1 - (index * 0.15),
                   }}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col">
                     <span 
-                      className={`text-3xl font-bold ${
+                      className={`text-2xl font-bold ${
                         ticket.ticket_type === 'preferential'
                           ? 'text-amber-400'
                           : 'text-emerald-400'
@@ -339,6 +361,11 @@ export default function PublicPanel() {
                     >
                       {ticket.display_code}
                     </span>
+                    {ticket.client_name && (
+                      <span className="text-sm text-white/60">
+                        {getMaskedName(ticket.client_name)}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white/90">
