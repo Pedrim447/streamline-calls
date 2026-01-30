@@ -353,27 +353,14 @@ export default function Reception() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
-                <Input
-                  id="clientName"
-                  placeholder="Digite o nome completo"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="clientCpf">CPF *</Label>
-                <Input
-                  id="clientCpf"
-                  placeholder="000.000.000-00"
-                  value={clientCpf}
-                  onChange={handleCpfChange}
-                  maxLength={14}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
+              <Input
+                id="clientName"
+                placeholder="Digite o nome completo"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">

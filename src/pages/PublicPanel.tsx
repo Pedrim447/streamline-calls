@@ -356,7 +356,7 @@ export default function PublicPanel() {
                     </span>
                     {ticket.client_name && (
                       <span className="text-sm text-white/60">
-                        {getMaskedName(ticket.client_name)}
+                        {formatClientName(ticket.client_name)}
                       </span>
                     )}
                   </div>
