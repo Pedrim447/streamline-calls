@@ -167,6 +167,8 @@ export type Database = {
           created_at: string
           id: string
           lock_timeout_seconds: number | null
+          manual_mode_enabled: boolean | null
+          manual_mode_min_number: number | null
           max_retry_attempts: number | null
           normal_priority: number | null
           preferential_priority: number | null
@@ -179,6 +181,8 @@ export type Database = {
           created_at?: string
           id?: string
           lock_timeout_seconds?: number | null
+          manual_mode_enabled?: boolean | null
+          manual_mode_min_number?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
           preferential_priority?: number | null
@@ -191,6 +195,8 @@ export type Database = {
           created_at?: string
           id?: string
           lock_timeout_seconds?: number | null
+          manual_mode_enabled?: boolean | null
+          manual_mode_min_number?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
           preferential_priority?: number | null

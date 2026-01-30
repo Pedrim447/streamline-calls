@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.setup-admin]
 verify_jwt = false
+
+[functions.manual-call-ticket]
+verify_jwt = false
