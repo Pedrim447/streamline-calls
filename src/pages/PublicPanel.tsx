@@ -164,6 +164,7 @@ export default function PublicPanel() {
     });
     
     setTimeout(() => setIsAnimating(false), 2000);
+  }, [counters, callTicket]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
