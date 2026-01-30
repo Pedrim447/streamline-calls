@@ -21,15 +21,19 @@ export default function PublicPanel() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   const countersRef = useRef<Record<string, Counter>>({});
+  const callTicketRef = useRef<(code: string, counter: number) => void>(() => {});
   const { callTicket } = useVoice();
 
-  // Keep ref in sync with state
+  // Keep refs in sync
   useEffect(() => {
     countersRef.current = counters;
   }, [counters]);
+
+  useEffect(() => {
+    callTicketRef.current = callTicket;
+  }, [callTicket]);
 
   // Update clock every second
   useEffect(() => {
@@ -41,6 +45,8 @@ export default function PublicPanel() {
 
   // Initial data load - run once on mount
   useEffect(() => {
+    let isMounted = true;
+    
     const loadInitialData = async () => {
       console.log('[PublicPanel] Loading initial data...');
       
@@ -57,8 +63,10 @@ export default function PublicPanel() {
       if (counterData) {
         console.log('[PublicPanel] Counters loaded:', counterData.length);
         counterData.forEach(c => { counterMap[c.id] = c; });
-        setCounters(counterMap);
-        countersRef.current = counterMap;
+        if (isMounted) {
+          setCounters(counterMap);
+          countersRef.current = counterMap;
+        }
       }
 
       // Fetch recent tickets
@@ -76,7 +84,7 @@ export default function PublicPanel() {
 
       console.log('[PublicPanel] Tickets loaded:', ticketData?.length || 0);
       
-      if (ticketData && ticketData.length > 0) {
+      if (isMounted && ticketData && ticketData.length > 0) {
         const ticketsWithCounters = ticketData.map(ticket => ({
           ...ticket,
           counter: ticket.counter_id ? counterMap[ticket.counter_id] : undefined,
@@ -86,14 +94,19 @@ export default function PublicPanel() {
         setLastCalls(ticketsWithCounters.slice(1, 6));
       }
       
-      setIsLoading(false);
-      setIsInitialized(true);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
 
     loadInitialData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Handle new call - use ref to avoid dependency issues
+  // Handle new call - stable function using refs
   const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
     console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
     
@@ -123,10 +136,10 @@ export default function PublicPanel() {
     setIsAnimating(true);
     setCurrentTicket(ticketWithCounter);
     
-    // Play voice announcement
+    // Play voice announcement using ref
     if (counter) {
       console.log('[PublicPanel] Playing voice for counter:', counter.number);
-      callTicket(updatedTicket.display_code, counter.number);
+      callTicketRef.current(updatedTicket.display_code, counter.number);
     }
     
     // Move previous current to history
@@ -136,12 +149,10 @@ export default function PublicPanel() {
     });
     
     setTimeout(() => setIsAnimating(false), 2000);
-  }, [callTicket]);
+  }, []); // No dependencies - uses refs
 
-  // Subscribe to real-time updates - only after initialized
+  // Subscribe to real-time updates - run once after mount
   useEffect(() => {
-    if (!isInitialized) return;
-    
     console.log('[PublicPanel] Setting up realtime subscription...');
     
     const channel = supabase
@@ -171,7 +182,7 @@ export default function PublicPanel() {
       console.log('[PublicPanel] Cleaning up realtime...');
       supabase.removeChannel(channel);
     };
-  }, [isInitialized, handleNewCall]);
+  }, [handleNewCall]); // handleNewCall is now stable
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
