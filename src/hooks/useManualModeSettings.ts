@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useRealtimeChannel } from './useRealtimeChannel';
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
@@ -34,23 +33,34 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
     };
 
     fetchSettings();
-  }, [effectiveUnitId]);
 
-  // Listen to realtime changes
-  useRealtimeChannel({
-    channelName: `settings-manual-mode-${effectiveUnitId}`,
-    table: 'settings',
-    filter: `unit_id=eq.${effectiveUnitId}`,
-    onUpdate: (payload) => {
-      const newData = payload.new as { manual_mode_enabled?: boolean; manual_mode_min_number?: number };
-      if (newData.manual_mode_enabled !== undefined) {
-        setManualModeEnabled(newData.manual_mode_enabled);
-      }
-      if (newData.manual_mode_min_number !== undefined) {
-        setManualModeMinNumber(newData.manual_mode_min_number);
-      }
-    },
-  });
+    // Listen to realtime changes on settings table
+    const channel = supabase
+      .channel(`settings-manual-mode-${effectiveUnitId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'settings',
+          filter: `unit_id=eq.${effectiveUnitId}`,
+        },
+        (payload) => {
+          const newData = payload.new as { manual_mode_enabled?: boolean; manual_mode_min_number?: number };
+          if (newData.manual_mode_enabled !== undefined) {
+            setManualModeEnabled(newData.manual_mode_enabled);
+          }
+          if (newData.manual_mode_min_number !== undefined) {
+            setManualModeMinNumber(newData.manual_mode_min_number);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [effectiveUnitId]);
 
   return {
     manualModeEnabled,
