@@ -23,7 +23,7 @@ import {
   Shield,
   ExternalLink,
   Monitor,
-  Hash
+  AlertTriangle
 } from 'lucide-react';
 import {
   Select,
