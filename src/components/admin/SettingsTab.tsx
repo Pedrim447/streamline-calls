@@ -61,6 +61,8 @@ export function SettingsTab() {
       setPreferentialPriority(settingsRes.data.preferential_priority ?? 10);
       setAutoResetDaily(settingsRes.data.auto_reset_daily ?? true);
       setResetTime(settingsRes.data.reset_time?.slice(0, 5) || '00:00');
+      setManualModeEnabled(settingsRes.data.manual_mode_enabled ?? false);
+      setManualModeMinNumber(settingsRes.data.manual_mode_min_number ?? 500);
     }
 
     setIsLoading(false);
