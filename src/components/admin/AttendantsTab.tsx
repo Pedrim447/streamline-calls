@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -16,36 +16,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { UserPlus, Shield, User, Users } from 'lucide-react';
-import type { Database } from '@/integrations/supabase/types';
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, Shield, User, Users } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
-type AppRole = Database['public']['Enums']['app_role'];
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface ProfileWithRoles extends Profile {
   roles: AppRole[];
 }
 
-const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
+const DEFAULT_UNIT_ID = "a0000000-0000-0000-0000-000000000001";
 
 const roleLabels: Record<AppRole, string> = {
-  admin: 'Administrador',
-  attendant: 'Atendente',
-  recepcao: 'Recepção',
+  admin: "Administrador",
+  attendant: "Atendente",
+  recepcao: "Recepção",
 };
 
-const roleBadgeVariants: Record<AppRole, 'default' | 'secondary' | 'outline'> = {
-  admin: 'default',
-  attendant: 'secondary',
-  recepcao: 'outline',
+const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = {
+  admin: "default",
+  attendant: "secondary",
+  recepcao: "outline",
 };
 
 export function AttendantsTab() {
@@ -53,46 +47,39 @@ export function AttendantsTab() {
   const [profiles, setProfiles] = useState<ProfileWithRoles[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+
   // Form state
-  const [formEmail, setFormEmail] = useState('');
-  const [formName, setFormName] = useState('');
-  const [formPassword, setFormPassword] = useState('');
-  const [formRole, setFormRole] = useState<AppRole>('attendant');
-  const [formMatricula, setFormMatricula] = useState('');
-  const [formCpf, setFormCpf] = useState('');
-  const [formBirthDate, setFormBirthDate] = useState('');
+  const [formEmail, setFormEmail] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formPassword, setFormPassword] = useState("");
+  const [formRole, setFormRole] = useState<AppRole>("attendant");
+  const [formMatricula, setFormMatricula] = useState("");
+  const [formCpf, setFormCpf] = useState("");
+  const [formBirthDate, setFormBirthDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchProfiles = async () => {
     setIsLoading(true);
-    
+
     // Fetch profiles
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('full_name');
+    const { data: profilesData, error: profilesError } = await supabase.from("profiles").select("*").order("full_name");
 
     if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
+      console.error("Error fetching profiles:", profilesError);
       setIsLoading(false);
       return;
     }
 
     // Fetch roles for each profile
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('*');
+    const { data: rolesData, error: rolesError } = await supabase.from("user_roles").select("*");
 
     if (rolesError) {
-      console.error('Error fetching roles:', rolesError);
+      console.error("Error fetching roles:", rolesError);
     }
 
-    const profilesWithRoles: ProfileWithRoles[] = (profilesData || []).map(profile => ({
+    const profilesWithRoles: ProfileWithRoles[] = (profilesData || []).map((profile) => ({
       ...profile,
-      roles: (rolesData || [])
-        .filter(r => r.user_id === profile.user_id)
-        .map(r => r.role),
+      roles: (rolesData || []).filter((r) => r.user_id === profile.user_id).map((r) => r.role),
     }));
 
     setProfiles(profilesWithRoles);
@@ -105,7 +92,7 @@ export function AttendantsTab() {
 
   // Format CPF as user types
   const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
+    const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 3) return digits;
     if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
     if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
@@ -119,18 +106,18 @@ export function AttendantsTab() {
   const handleCreateUser = async () => {
     if (!formEmail || !formName || !formPassword) {
       toast({
-        title: 'Erro',
-        description: 'Preencha os campos obrigatórios (nome, email e senha)',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Preencha os campos obrigatórios (nome, email e senha)",
+        variant: "destructive",
       });
       return;
     }
 
     if (formPassword.length < 6) {
       toast({
-        title: 'Erro',
-        description: 'A senha deve ter pelo menos 6 caracteres',
-        variant: 'destructive',
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive",
       });
       return;
     }
@@ -139,7 +126,7 @@ export function AttendantsTab() {
 
     try {
       // Create user via edge function
-      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
         body: {
           email: formEmail,
           password: formPassword,
@@ -156,27 +143,27 @@ export function AttendantsTab() {
 
       if (data.error) {
         toast({
-          title: 'Erro',
+          title: "Erro",
           description: data.error,
-          variant: 'destructive',
+          variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: 'Sucesso',
-        description: 'Usuário criado com sucesso',
+        title: "Sucesso",
+        description: "Usuário criado com sucesso",
       });
 
       setIsDialogOpen(false);
       resetForm();
       fetchProfiles();
     } catch (err) {
-      console.error('Error creating user:', err);
+      console.error("Error creating user:", err);
       toast({
-        title: 'Erro',
-        description: 'Falha ao criar usuário',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Falha ao criar usuário",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -184,72 +171,64 @@ export function AttendantsTab() {
   };
 
   const handleToggleActive = async (profile: ProfileWithRoles) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: !profile.is_active })
-      .eq('id', profile.id);
+    const { error } = await supabase.from("profiles").update({ is_active: !profile.is_active }).eq("id", profile.id);
 
     if (error) {
       toast({
-        title: 'Erro',
-        description: 'Falha ao atualizar status',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Falha ao atualizar status",
+        variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: 'Sucesso',
-      description: `Usuário ${profile.is_active ? 'desativado' : 'ativado'}`,
+      title: "Sucesso",
+      description: `Usuário ${profile.is_active ? "desativado" : "ativado"}`,
     });
-    
+
     fetchProfiles();
   };
 
   const handleUpdateRole = async (profile: ProfileWithRoles, newRole: AppRole) => {
     // Remove old roles
-    await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', profile.user_id);
+    await supabase.from("user_roles").delete().eq("user_id", profile.user_id);
 
     // Add new role
-    const { error } = await supabase
-      .from('user_roles')
-      .insert({ user_id: profile.user_id, role: newRole });
+    const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: newRole });
 
     if (error) {
       toast({
-        title: 'Erro',
-        description: 'Falha ao atualizar permissão',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Falha ao atualizar permissão",
+        variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: 'Sucesso',
-      description: 'Permissão atualizada',
+      title: "Sucesso",
+      description: "Permissão atualizada",
     });
-    
+
     fetchProfiles();
   };
 
   const resetForm = () => {
-    setFormEmail('');
-    setFormName('');
-    setFormPassword('');
-    setFormRole('attendant');
-    setFormMatricula('');
-    setFormCpf('');
-    setFormBirthDate('');
+    setFormEmail("");
+    setFormName("");
+    setFormPassword("");
+    setFormRole("attendant");
+    setFormMatricula("");
+    setFormCpf("");
+    setFormBirthDate("");
   };
 
   const getRoleIcon = (role: AppRole) => {
     switch (role) {
-      case 'admin':
+      case "admin":
         return <Shield className="h-5 w-5 text-primary" />;
-      case 'recepcao':
+      case "recepcao":
         return <Users className="h-5 w-5 text-blue-500" />;
       default:
         return <User className="h-5 w-5 text-muted-foreground" />;
@@ -264,7 +243,7 @@ export function AttendantsTab() {
           <Skeleton className="h-4 w-60" />
         </CardHeader>
         <CardContent className="space-y-4">
-          {[1, 2, 3].map(i => (
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </CardContent>
@@ -278,14 +257,15 @@ export function AttendantsTab() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Gerenciar Usuários</CardTitle>
-            <CardDescription>
-              Adicione, edite ou remova usuários do sistema
-            </CardDescription>
+            <CardDescription>Adicione, edite ou remova usuários do sistema</CardDescription>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -295,11 +275,9 @@ export function AttendantsTab() {
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Criar Novo Usuário</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados para criar um novo usuário no sistema
-                </DialogDescription>
+                <DialogDescription>Preencha os dados para criar um novo usuário no sistema</DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
@@ -311,7 +289,7 @@ export function AttendantsTab() {
                       onChange={(e) => setFormName(e.target.value)}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="matricula">Matrícula</Label>
                     <Input
@@ -321,7 +299,7 @@ export function AttendantsTab() {
                       onChange={(e) => setFormMatricula(e.target.value)}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="cpf">CPF</Label>
                     <Input
@@ -332,7 +310,7 @@ export function AttendantsTab() {
                       maxLength={14}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="birth_date">Data de Nascimento</Label>
                     <Input
@@ -342,7 +320,7 @@ export function AttendantsTab() {
                       onChange={(e) => setFormBirthDate(e.target.value)}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="role">Tipo de Usuário *</Label>
                     <Select value={formRole} onValueChange={(v) => setFormRole(v as AppRole)}>
@@ -352,11 +330,11 @@ export function AttendantsTab() {
                       <SelectContent>
                         <SelectItem value="attendant">Atendente</SelectItem>
                         <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="recepcao">Recepção (Em breve)</SelectItem>
+                        <SelectItem value="recepcao">Recepção </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="email">Email *</Label>
                     <Input
@@ -367,7 +345,7 @@ export function AttendantsTab() {
                       onChange={(e) => setFormEmail(e.target.value)}
                     />
                   </div>
-                  
+
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="password">Senha *</Label>
                     <Input
@@ -379,7 +357,7 @@ export function AttendantsTab() {
                     />
                   </div>
                 </div>
-                
+
                 <p className="text-xs text-muted-foreground">* Campos obrigatórios</p>
               </div>
 
@@ -388,7 +366,7 @@ export function AttendantsTab() {
                   Cancelar
                 </Button>
                 <Button onClick={handleCreateUser} disabled={isSubmitting}>
-                  {isSubmitting ? 'Criando...' : 'Criar Usuário'}
+                  {isSubmitting ? "Criando..." : "Criar Usuário"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -404,20 +382,19 @@ export function AttendantsTab() {
             </div>
           ) : (
             profiles.map((profile) => {
-              const primaryRole = profile.roles[0] || 'attendant';
+              const primaryRole = profile.roles[0] || "attendant";
               return (
-                <div
-                  key={profile.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card"
-                >
+                <div key={profile.id} className="flex items-center justify-between p-4 rounded-lg border bg-card">
                   <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-full ${
-                      primaryRole === 'admin' 
-                        ? 'bg-primary/10' 
-                        : primaryRole === 'recepcao'
-                        ? 'bg-blue-500/10'
-                        : 'bg-muted'
-                    }`}>
+                    <div
+                      className={`p-2 rounded-full ${
+                        primaryRole === "admin"
+                          ? "bg-primary/10"
+                          : primaryRole === "recepcao"
+                            ? "bg-blue-500/10"
+                            : "bg-muted"
+                      }`}
+                    >
                       {getRoleIcon(primaryRole)}
                     </div>
                     <div>
@@ -427,23 +404,20 @@ export function AttendantsTab() {
                           {roleLabels[primaryRole]}
                         </Badge>
                         {!profile.is_active && (
-                          <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Inativo
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{profile.email}</span>
-                        {(profile as any).matricula && (
-                          <span>• Mat: {(profile as any).matricula}</span>
-                        )}
+                        {(profile as any).matricula && <span>• Mat: {(profile as any).matricula}</span>}
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
-                    <Select 
-                      value={primaryRole}
-                      onValueChange={(v) => handleUpdateRole(profile, v as AppRole)}
-                    >
+                    <Select value={primaryRole} onValueChange={(v) => handleUpdateRole(profile, v as AppRole)}>
                       <SelectTrigger className="w-36">
                         <SelectValue />
                       </SelectTrigger>
@@ -453,7 +427,7 @@ export function AttendantsTab() {
                         <SelectItem value="recepcao">Recepção</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`active-${profile.id}`} className="text-sm">
                         Ativo
