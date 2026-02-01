@@ -497,14 +497,6 @@ export default function Dashboard() {
         ticketCode={currentTicket?.display_code}
       />
 
-      {/* Manual Call Dialog */}
-      <ManualCallDialog
-        open={isManualCallDialogOpen}
-        onOpenChange={setIsManualCallDialogOpen}
-        onConfirm={handleManualCall}
-        minNumber={manualModeMinNumber}
-        isLoading={isProcessing}
-      />
     </div>
   );
 }
