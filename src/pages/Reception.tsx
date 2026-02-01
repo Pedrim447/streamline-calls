@@ -138,27 +138,61 @@ export default function Reception() {
       return;
     }
 
+    // Validate manual ticket number if manual mode is enabled
+    if (manualModeEnabled) {
+      const ticketNum = parseInt(manualTicketNumber, 10);
+      
+      if (!manualTicketNumber || isNaN(ticketNum)) {
+        toast.error('Por favor, informe o número da senha');
+        return;
+      }
+      
+      if (ticketNum < manualModeMinNumber) {
+        toast.error(`O número da senha deve ser maior ou igual a ${manualModeMinNumber}`);
+        return;
+      }
+      
+      if (lastGeneratedNumber !== null && ticketNum <= lastGeneratedNumber) {
+        toast.error(`O número da senha deve ser maior que ${lastGeneratedNumber} (última senha gerada)`);
+        return;
+      }
+    }
+
     setIsCreating(true);
 
     try {
       const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
       
+      // Build request body
+      const requestBody: Record<string, unknown> = {
+        unit_id: unitId,
+        ticket_type: ticketType,
+        client_name: clientName.trim(),
+      };
+      
+      // Add manual ticket number if in manual mode
+      if (manualModeEnabled) {
+        requestBody.manual_ticket_number = parseInt(manualTicketNumber, 10);
+      }
+      
       // Call the edge function to create a ticket
       const { data, error } = await supabase.functions.invoke('create-ticket', {
-        body: {
-          unit_id: unitId,
-          ticket_type: ticketType,
-          client_name: clientName.trim(),
-        },
+        body: requestBody,
       });
 
       if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
 
       if (data?.ticket) {
         setCreatedTicket(data.ticket);
         setShowTicketDialog(true);
         setClientName('');
         setTicketType('normal');
+        setManualTicketNumber('');
         toast.success('Senha gerada com sucesso!');
       }
     } catch (error: any) {
