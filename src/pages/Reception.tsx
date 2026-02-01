@@ -124,6 +124,12 @@ export default function Reception() {
 
 
   const handleCreateTicket = async () => {
+    // Check if calling system is active
+    if (!callingSystemActive) {
+      toast.error('Sistema de chamadas não está ativo. Contate o administrador.');
+      return;
+    }
+
     const trimmedName = clientName.trim();
     
     // Validate name - must have at least 2 words (first and last name)
@@ -147,8 +153,13 @@ export default function Reception() {
         return;
       }
       
-      if (ticketNum < manualModeMinNumber) {
-        toast.error(`O número da senha deve ser maior ou igual a ${manualModeMinNumber}`);
+      // Use appropriate minimum based on ticket type
+      const effectiveMinNumber = ticketType === 'preferential' 
+        ? manualModeMinNumberPreferential 
+        : manualModeMinNumber;
+      
+      if (ticketNum < effectiveMinNumber) {
+        toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
       
