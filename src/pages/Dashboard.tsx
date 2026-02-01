@@ -21,8 +21,7 @@ import {
   RefreshCw,
   Shield,
   ExternalLink,
-  Monitor,
-  AlertTriangle
+  Monitor
 } from 'lucide-react';
 import {
   Select,
