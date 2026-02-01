@@ -139,12 +139,16 @@ Deno.serve(async (req) => {
     } else {
       // Automatic mode - use counter logic
       
-      // Determine starting number based on mode
+      // Determine starting number based on mode and ticket type
       let startingNumber: number;
       if (manualModeEnabled) {
-        startingNumber = manualModeMinNumber;
+        startingNumber = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
       } else {
-        startingNumber = ticket_type === 'preferential' ? 0 : 500;
+        startingNumber = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
       }
 
       // Get or create the counter for today
