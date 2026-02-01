@@ -262,6 +262,51 @@ export function SettingsTab() {
         </CardContent>
       </Card>
 
+      {/* Manual Mode Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Hand className="h-5 w-5" />
+            Modo Manual
+          </CardTitle>
+          <CardDescription>
+            Permite que atendentes chamem senhas manualmente informando o número
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="manualModeEnabled">Ativar Modo Manual</Label>
+              <p className="text-sm text-muted-foreground">
+                Quando ativo, atendentes podem chamar senhas informando o número
+              </p>
+            </div>
+            <Switch
+              id="manualModeEnabled"
+              checked={manualModeEnabled}
+              onCheckedChange={setManualModeEnabled}
+            />
+          </div>
+
+          {manualModeEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="manualModeMinNumber">Número Mínimo de Partida</Label>
+              <Input
+                id="manualModeMinNumber"
+                type="number"
+                min="1"
+                value={manualModeMinNumber}
+                onChange={(e) => setManualModeMinNumber(parseInt(e.target.value) || 1)}
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                O atendente não poderá chamar senhas com número inferior a este valor
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Priority & Reset Settings */}
       <Card>
         <CardHeader>
