@@ -23,7 +23,7 @@ import {
   Shield,
   ExternalLink,
   Monitor,
-  Hash
+  AlertTriangle
 } from 'lucide-react';
 import {
   Select,
@@ -36,7 +36,7 @@ import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
-import { ManualCallDialog } from '@/components/dashboard/ManualCallDialog';
+
 import type { Database } from '@/integrations/supabase/types';
 
 type Counter = Database['public']['Tables']['counters']['Row'];
@@ -52,7 +52,7 @@ export default function Dashboard() {
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
-  const [isManualCallDialogOpen, setIsManualCallDialogOpen] = useState(false);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
@@ -234,53 +234,6 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
-  const handleManualCall = async (ticketNumber: number, ticketType: 'normal' | 'preferential') => {
-    if (!counter || !user?.id) return;
-    
-    setIsProcessing(true);
-    
-    try {
-      const response = await supabase.functions.invoke('manual-call-ticket', {
-        body: {
-          unit_id: profile?.unit_id || DEFAULT_UNIT_ID,
-          ticket_number: ticketNumber,
-          ticket_type: ticketType,
-          counter_id: counter.id,
-          attendant_id: user.id,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data?.error) {
-        toast({
-          title: 'Erro',
-          description: response.data.error,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Sucesso',
-        description: `Senha ${ticketType === 'preferential' ? 'P' : 'N'}-${ticketNumber.toString().padStart(3, '0')} chamada com sucesso`,
-      });
-      
-      setIsManualCallDialogOpen(false);
-      startCooldown();
-    } catch (error) {
-      console.error('Error calling manual ticket:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao chamar senha manualmente',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleLogout = async () => {
     // Release the counter before logging out
@@ -374,6 +327,18 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Manual Mode Banner */}
+      {manualModeEnabled && (
+        <div className="bg-amber-500/10 border border-amber-500/50 text-amber-700 dark:text-amber-400 px-4 py-3">
+          <div className="container mx-auto flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm font-medium">
+              <strong>Modo Manual Ativo</strong> — Senhas iniciando em {manualModeMinNumber}. Apenas senhas geradas pela recepção podem ser chamadas.
+            </p>
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {isSelectingCounter ? (
@@ -477,19 +442,6 @@ export default function Dashboard() {
                     {cooldownRemaining > 0 ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
-                  {/* Manual Call Button - only show if manual mode enabled */}
-                  {manualModeEnabled && (
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      className="w-full h-12"
-                      onClick={() => setIsManualCallDialogOpen(true)}
-                      disabled={isProcessing || currentTicket !== null}
-                    >
-                      <Hash className="h-5 w-5 mr-2" />
-                      Chamar Senha Manual
-                    </Button>
-                  )}
 
                   {currentTicket && (
                     <div className="grid grid-cols-2 gap-3">
@@ -557,14 +509,6 @@ export default function Dashboard() {
         ticketCode={currentTicket?.display_code}
       />
 
-      {/* Manual Call Dialog */}
-      <ManualCallDialog
-        open={isManualCallDialogOpen}
-        onOpenChange={setIsManualCallDialogOpen}
-        onConfirm={handleManualCall}
-        minNumber={manualModeMinNumber}
-        isLoading={isProcessing}
-      />
     </div>
   );
 }
