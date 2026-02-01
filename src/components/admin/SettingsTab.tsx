@@ -34,6 +34,8 @@ export function SettingsTab() {
   const [preferentialPriority, setPreferentialPriority] = useState(10);
   const [autoResetDaily, setAutoResetDaily] = useState(true);
   const [resetTime, setResetTime] = useState('00:00');
+  const [manualModeEnabled, setManualModeEnabled] = useState(false);
+  const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
 
   const fetchData = async () => {
     setIsLoading(true);
