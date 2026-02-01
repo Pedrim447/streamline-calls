@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Save, Building, Volume2, Clock } from 'lucide-react';
+import { Save, Building, Volume2, Clock, Hand } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Unit = Database['public']['Tables']['units']['Row'];
@@ -34,6 +34,8 @@ export function SettingsTab() {
   const [preferentialPriority, setPreferentialPriority] = useState(10);
   const [autoResetDaily, setAutoResetDaily] = useState(true);
   const [resetTime, setResetTime] = useState('00:00');
+  const [manualModeEnabled, setManualModeEnabled] = useState(false);
+  const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -59,6 +61,8 @@ export function SettingsTab() {
       setPreferentialPriority(settingsRes.data.preferential_priority ?? 10);
       setAutoResetDaily(settingsRes.data.auto_reset_daily ?? true);
       setResetTime(settingsRes.data.reset_time?.slice(0, 5) || '00:00');
+      setManualModeEnabled(settingsRes.data.manual_mode_enabled ?? false);
+      setManualModeMinNumber(settingsRes.data.manual_mode_min_number ?? 500);
     }
 
     setIsLoading(false);
@@ -95,6 +99,8 @@ export function SettingsTab() {
           preferential_priority: preferentialPriority,
           auto_reset_daily: autoResetDaily,
           reset_time: resetTime + ':00',
+          manual_mode_enabled: manualModeEnabled,
+          manual_mode_min_number: manualModeMinNumber,
         })
         .eq('unit_id', DEFAULT_UNIT_ID);
 
@@ -253,6 +259,51 @@ export function SettingsTab() {
               className="w-full"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Mode Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Hand className="h-5 w-5" />
+            Modo Manual
+          </CardTitle>
+          <CardDescription>
+            Permite que atendentes chamem senhas manualmente informando o número
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="manualModeEnabled">Ativar Modo Manual</Label>
+              <p className="text-sm text-muted-foreground">
+                Quando ativo, atendentes podem chamar senhas informando o número
+              </p>
+            </div>
+            <Switch
+              id="manualModeEnabled"
+              checked={manualModeEnabled}
+              onCheckedChange={setManualModeEnabled}
+            />
+          </div>
+
+          {manualModeEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="manualModeMinNumber">Número Mínimo de Partida</Label>
+              <Input
+                id="manualModeMinNumber"
+                type="number"
+                min="1"
+                value={manualModeMinNumber}
+                onChange={(e) => setManualModeMinNumber(parseInt(e.target.value) || 1)}
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                O atendente não poderá chamar senhas com número inferior a este valor
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
