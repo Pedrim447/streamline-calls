@@ -116,7 +116,11 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
   return {
     manualModeEnabled,
     manualModeMinNumber,
+    manualModeMinNumberPreferential,
+    callingSystemActive,
     lastGeneratedNumber,
     isLoading,
+  };
+}
   };
 }
