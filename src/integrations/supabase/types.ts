@@ -164,11 +164,13 @@ export type Database = {
       settings: {
         Row: {
           auto_reset_daily: boolean | null
+          calling_system_active: boolean | null
           created_at: string
           id: string
           lock_timeout_seconds: number | null
           manual_mode_enabled: boolean | null
           manual_mode_min_number: number | null
+          manual_mode_min_number_preferential: number | null
           max_retry_attempts: number | null
           normal_priority: number | null
           preferential_priority: number | null
@@ -178,11 +180,13 @@ export type Database = {
         }
         Insert: {
           auto_reset_daily?: boolean | null
+          calling_system_active?: boolean | null
           created_at?: string
           id?: string
           lock_timeout_seconds?: number | null
           manual_mode_enabled?: boolean | null
           manual_mode_min_number?: number | null
+          manual_mode_min_number_preferential?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
           preferential_priority?: number | null
@@ -192,11 +196,13 @@ export type Database = {
         }
         Update: {
           auto_reset_daily?: boolean | null
+          calling_system_active?: boolean | null
           created_at?: string
           id?: string
           lock_timeout_seconds?: number | null
           manual_mode_enabled?: boolean | null
           manual_mode_min_number?: number | null
+          manual_mode_min_number_preferential?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
           preferential_priority?: number | null
