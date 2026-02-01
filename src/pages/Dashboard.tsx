@@ -430,19 +430,6 @@ export default function Dashboard() {
                     {cooldownRemaining > 0 ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
-                  {/* Manual Call Button - only show if manual mode enabled */}
-                  {manualModeEnabled && (
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      className="w-full h-12"
-                      onClick={() => setIsManualCallDialogOpen(true)}
-                      disabled={isProcessing || currentTicket !== null}
-                    >
-                      <Hash className="h-5 w-5 mr-2" />
-                      Chamar Senha Manual
-                    </Button>
-                  )}
 
                   {currentTicket && (
                     <div className="grid grid-cols-2 gap-3">
