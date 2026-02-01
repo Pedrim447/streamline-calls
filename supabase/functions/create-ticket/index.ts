@@ -182,8 +182,12 @@ Deno.serve(async (req) => {
       } else {
         nextNumber = existingCounter.last_number + 1;
         
-        if (manualModeEnabled && nextNumber < manualModeMinNumber) {
-          nextNumber = manualModeMinNumber;
+        const effectiveMin = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
+        
+        if (nextNumber < effectiveMin) {
+          nextNumber = effectiveMin;
         }
         
         const { error: updateError } = await supabaseAdmin

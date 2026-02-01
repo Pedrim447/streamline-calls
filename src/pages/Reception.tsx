@@ -56,7 +56,7 @@ export default function Reception() {
   const [manualTicketNumber, setManualTicketNumber] = useState('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
