@@ -122,5 +122,3 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
     isLoading,
   };
 }
-  };
-}
