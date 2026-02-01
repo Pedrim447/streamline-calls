@@ -42,22 +42,37 @@ Deno.serve(async (req) => {
     // Get settings for priority and manual mode
     const { data: settings } = await supabaseAdmin
       .from('settings')
-      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number')
+      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
       .eq('unit_id', unit_id)
       .single();
 
+    // Check if calling system is active
+    const callingSystemActive = settings?.calling_system_active ?? false;
+    if (!callingSystemActive) {
+      return new Response(
+        JSON.stringify({ error: 'Sistema de chamadas não está ativo. Contate o administrador.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const manualModeMinNumber = settings?.manual_mode_min_number ?? 500;
+    const manualModeMinNumberPreferential = settings?.manual_mode_min_number_preferential ?? 0;
 
     let nextNumber: number;
 
     if (manualModeEnabled && manual_ticket_number !== undefined) {
       // Manual mode with explicit number from reception
       
+      // Determine the minimum based on ticket type
+      const effectiveMinNumber = ticket_type === 'preferential' 
+        ? manualModeMinNumberPreferential 
+        : manualModeMinNumber;
+      
       // Validate minimum
-      if (manual_ticket_number < manualModeMinNumber) {
+      if (manual_ticket_number < effectiveMinNumber) {
         return new Response(
-          JSON.stringify({ error: `Número mínimo permitido é ${manualModeMinNumber}` }),
+          JSON.stringify({ error: `Número mínimo permitido para ${ticket_type === 'preferential' ? 'preferencial' : 'normal'} é ${effectiveMinNumber}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -124,12 +139,16 @@ Deno.serve(async (req) => {
     } else {
       // Automatic mode - use counter logic
       
-      // Determine starting number based on mode
+      // Determine starting number based on mode and ticket type
       let startingNumber: number;
       if (manualModeEnabled) {
-        startingNumber = manualModeMinNumber;
+        startingNumber = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
       } else {
-        startingNumber = ticket_type === 'preferential' ? 0 : 500;
+        startingNumber = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
       }
 
       // Get or create the counter for today
@@ -163,8 +182,12 @@ Deno.serve(async (req) => {
       } else {
         nextNumber = existingCounter.last_number + 1;
         
-        if (manualModeEnabled && nextNumber < manualModeMinNumber) {
-          nextNumber = manualModeMinNumber;
+        const effectiveMin = ticket_type === 'preferential' 
+          ? manualModeMinNumberPreferential 
+          : manualModeMinNumber;
+        
+        if (nextNumber < effectiveMin) {
+          nextNumber = effectiveMin;
         }
         
         const { error: updateError } = await supabaseAdmin

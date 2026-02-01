@@ -6,6 +6,8 @@ const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 interface ManualModeSettings {
   manualModeEnabled: boolean;
   manualModeMinNumber: number;
+  manualModeMinNumberPreferential: number;
+  callingSystemActive: boolean;
   lastGeneratedNumber: number | null;
   isLoading: boolean;
 }
@@ -13,6 +15,8 @@ interface ManualModeSettings {
 export function useManualModeSettings(unitId?: string): ManualModeSettings {
   const [manualModeEnabled, setManualModeEnabled] = useState(false);
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
+  const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
+  const [callingSystemActive, setCallingSystemActive] = useState(false);
   const [lastGeneratedNumber, setLastGeneratedNumber] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,13 +29,17 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       // Fetch settings
       const { data, error } = await supabase
         .from('settings')
-        .select('manual_mode_enabled, manual_mode_min_number')
+        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
         .eq('unit_id', effectiveUnitId)
         .maybeSingle();
 
       if (data) {
         setManualModeEnabled(data.manual_mode_enabled ?? false);
         setManualModeMinNumber(data.manual_mode_min_number ?? 500);
+        // @ts-ignore - new columns
+        setManualModeMinNumberPreferential(data.manual_mode_min_number_preferential ?? 0);
+        // @ts-ignore - new columns
+        setCallingSystemActive(data.calling_system_active ?? false);
       }
       
       // Fetch last generated ticket number for today
@@ -108,6 +116,8 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
   return {
     manualModeEnabled,
     manualModeMinNumber,
+    manualModeMinNumberPreferential,
+    callingSystemActive,
     lastGeneratedNumber,
     isLoading,
   };
