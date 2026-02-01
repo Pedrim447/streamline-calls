@@ -107,6 +107,7 @@ export function SettingsTab() {
           reset_time: resetTime + ':00',
           manual_mode_enabled: manualModeEnabled,
           manual_mode_min_number: manualModeMinNumber,
+          manual_mode_min_number_preferential: manualModeMinNumberPreferential,
         })
         .eq('unit_id', DEFAULT_UNIT_ID);
 
