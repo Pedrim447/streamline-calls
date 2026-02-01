@@ -328,6 +328,18 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Manual Mode Banner */}
+      {manualModeEnabled && (
+        <div className="bg-amber-500/10 border border-amber-500/50 text-amber-700 dark:text-amber-400 px-4 py-3">
+          <div className="container mx-auto flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+            <p className="text-sm font-medium">
+              <strong>Modo Manual Ativo</strong> — Senhas iniciando em {manualModeMinNumber}. Apenas senhas geradas pela recepção podem ser chamadas.
+            </p>
+          </div>
+        </div>
+      )}
+
       <main className="container mx-auto px-4 py-6 space-y-6">
         {isSelectingCounter ? (
           <Card>
