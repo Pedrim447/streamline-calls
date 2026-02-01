@@ -402,14 +402,27 @@ export default function Reception() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* System Status Banner */}
+            {!callingSystemActive && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Sistema Desativado</p>
+                  <p className="opacity-80">
+                    O sistema de chamadas não está ativo. Contate o administrador.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Manual Mode Banner */}
-            {manualModeEnabled && (
+            {callingSystemActive && manualModeEnabled && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium">Modo Manual Ativo</p>
                   <p className="text-amber-600 dark:text-amber-500">
-                    Mínimo: {manualModeMinNumber} | Última gerada: {lastGeneratedNumber ?? 'Nenhuma'}
+                    Normal: mín. {manualModeMinNumber} | Preferencial: mín. {manualModeMinNumberPreferential} | Última gerada: {lastGeneratedNumber ?? 'Nenhuma'}
                   </p>
                 </div>
               </div>
@@ -422,12 +435,17 @@ export default function Reception() {
                 placeholder="Digite o nome completo"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
+                disabled={!callingSystemActive}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="ticketType">Tipo de Atendimento</Label>
-              <Select value={ticketType} onValueChange={(v) => setTicketType(v as TicketType)}>
+              <Select 
+                value={ticketType} 
+                onValueChange={(v) => setTicketType(v as TicketType)}
+                disabled={!callingSystemActive}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -445,13 +463,20 @@ export default function Reception() {
                 <Input
                   id="ticketNumber"
                   type="number"
-                  placeholder={`Mínimo: ${Math.max(manualModeMinNumber, (lastGeneratedNumber ?? 0) + 1)}`}
+                  placeholder={`Mínimo: ${Math.max(
+                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
+                    (lastGeneratedNumber ?? 0) + 1
+                  )}`}
                   value={manualTicketNumber}
                   onChange={(e) => setManualTicketNumber(e.target.value)}
-                  min={Math.max(manualModeMinNumber, (lastGeneratedNumber ?? 0) + 1)}
+                  min={Math.max(
+                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
+                    (lastGeneratedNumber ?? 0) + 1
+                  )}
+                  disabled={!callingSystemActive}
                 />
                 <p className="text-xs text-muted-foreground">
-                  O próximo número deve ser maior que {lastGeneratedNumber ?? manualModeMinNumber - 1}
+                  O próximo número deve ser maior que {lastGeneratedNumber ?? (ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber) - 1}
                 </p>
               </div>
             )}
