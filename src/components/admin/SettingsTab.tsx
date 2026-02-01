@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Save, Building, Volume2, Clock } from 'lucide-react';
+import { Save, Building, Volume2, Clock, Hand } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type Unit = Database['public']['Tables']['units']['Row'];
