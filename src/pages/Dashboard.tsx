@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
-import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -22,8 +21,7 @@ import {
   RefreshCw,
   Shield,
   ExternalLink,
-  Monitor,
-  AlertTriangle
+  Monitor
 } from 'lucide-react';
 import {
   Select,
@@ -56,8 +54,6 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
-  // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber } = useManualModeSettings(profile?.unit_id);
 
   const { 
     tickets, 
@@ -328,17 +324,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Manual Mode Banner */}
-      {manualModeEnabled && (
-        <div className="bg-amber-500/10 border border-amber-500/50 text-amber-700 dark:text-amber-400 px-4 py-3">
-          <div className="container mx-auto flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-            <p className="text-sm font-medium">
-              <strong>Modo Manual Ativo</strong> — Senhas iniciando em {manualModeMinNumber}. Apenas senhas geradas pela recepção podem ser chamadas.
-            </p>
-          </div>
-        </div>
-      )}
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {isSelectingCounter ? (

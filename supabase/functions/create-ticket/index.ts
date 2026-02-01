@@ -10,6 +10,7 @@ interface CreateTicketRequest {
   ticket_type: 'normal' | 'preferential';
   client_name?: string;
   client_cpf?: string;
+  manual_ticket_number?: number;
 }
 
 Deno.serve(async (req) => {
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreateTicketRequest = await req.json();
-    const { unit_id, ticket_type, client_name, client_cpf } = body;
+    const { unit_id, ticket_type, client_name, client_cpf, manual_ticket_number } = body;
 
     if (!unit_id || !ticket_type) {
       return new Response(
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Creating ticket for unit:', unit_id, 'type:', ticket_type);
+    console.log('Creating ticket for unit:', unit_id, 'type:', ticket_type, 'manual_number:', manual_ticket_number);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -48,69 +49,136 @@ Deno.serve(async (req) => {
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const manualModeMinNumber = settings?.manual_mode_min_number ?? 500;
 
-    // Get or create the counter for today
-    const { data: existingCounter, error: counterFetchError } = await supabaseAdmin
-      .from('ticket_counters')
-      .select('*')
-      .eq('unit_id', unit_id)
-      .eq('ticket_type', ticket_type)
-      .eq('counter_date', today)
-      .single();
-
     let nextNumber: number;
-    
-    // Determine starting number based on mode
-    let startingNumber: number;
-    if (manualModeEnabled) {
-      // In manual mode, both types start from the admin-defined minimum
-      startingNumber = manualModeMinNumber;
-    } else {
-      // Normal mode: Normal starts at 500, Preferential starts at 0
-      startingNumber = ticket_type === 'preferential' ? 0 : 500;
-    }
 
-    if (!existingCounter) {
-      // Create new counter for today with appropriate starting number
-      nextNumber = startingNumber;
+    if (manualModeEnabled && manual_ticket_number !== undefined) {
+      // Manual mode with explicit number from reception
       
-      const { data: newCounter, error: createError } = await supabaseAdmin
-        .from('ticket_counters')
-        .insert({
-          unit_id,
-          ticket_type,
-          counter_date: today,
-          last_number: nextNumber,
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error('Error creating counter:', createError);
+      // Validate minimum
+      if (manual_ticket_number < manualModeMinNumber) {
         return new Response(
-          JSON.stringify({ error: 'Erro ao criar contador' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: `Número mínimo permitido é ${manualModeMinNumber}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-    } else {
-      // Increment the counter
-      nextNumber = existingCounter.last_number + 1;
       
-      // In manual mode, ensure we never go below the minimum
-      if (manualModeEnabled && nextNumber < manualModeMinNumber) {
-        nextNumber = manualModeMinNumber;
+      // Check if number already exists today
+      const { data: existingTicket } = await supabaseAdmin
+        .from('tickets')
+        .select('id')
+        .eq('unit_id', unit_id)
+        .eq('ticket_number', manual_ticket_number)
+        .gte('created_at', `${today}T00:00:00`)
+        .maybeSingle();
+      
+      if (existingTicket) {
+        return new Response(
+          JSON.stringify({ error: `Senha ${manual_ticket_number} já foi gerada hoje` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      const { error: updateError } = await supabaseAdmin
-        .from('ticket_counters')
-        .update({ last_number: nextNumber })
-        .eq('id', existingCounter.id);
-
-      if (updateError) {
-        console.error('Error updating counter:', updateError);
+      // Check if number is greater than last generated
+      const { data: lastTicket } = await supabaseAdmin
+        .from('tickets')
+        .select('ticket_number')
+        .eq('unit_id', unit_id)
+        .gte('created_at', `${today}T00:00:00`)
+        .order('ticket_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (lastTicket && manual_ticket_number <= lastTicket.ticket_number) {
         return new Response(
-          JSON.stringify({ error: 'Erro ao atualizar contador' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: `Número deve ser maior que ${lastTicket.ticket_number} (última senha gerada)` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+      
+      nextNumber = manual_ticket_number;
+      
+      // Update or create the counter to track this number
+      const { data: existingCounter } = await supabaseAdmin
+        .from('ticket_counters')
+        .select('*')
+        .eq('unit_id', unit_id)
+        .eq('ticket_type', ticket_type)
+        .eq('counter_date', today)
+        .maybeSingle();
+      
+      if (existingCounter) {
+        await supabaseAdmin
+          .from('ticket_counters')
+          .update({ last_number: nextNumber })
+          .eq('id', existingCounter.id);
+      } else {
+        await supabaseAdmin
+          .from('ticket_counters')
+          .insert({
+            unit_id,
+            ticket_type,
+            counter_date: today,
+            last_number: nextNumber,
+          });
+      }
+    } else {
+      // Automatic mode - use counter logic
+      
+      // Determine starting number based on mode
+      let startingNumber: number;
+      if (manualModeEnabled) {
+        startingNumber = manualModeMinNumber;
+      } else {
+        startingNumber = ticket_type === 'preferential' ? 0 : 500;
+      }
+
+      // Get or create the counter for today
+      const { data: existingCounter } = await supabaseAdmin
+        .from('ticket_counters')
+        .select('*')
+        .eq('unit_id', unit_id)
+        .eq('ticket_type', ticket_type)
+        .eq('counter_date', today)
+        .maybeSingle();
+
+      if (!existingCounter) {
+        nextNumber = startingNumber;
+        
+        const { error: createError } = await supabaseAdmin
+          .from('ticket_counters')
+          .insert({
+            unit_id,
+            ticket_type,
+            counter_date: today,
+            last_number: nextNumber,
+          });
+
+        if (createError) {
+          console.error('Error creating counter:', createError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao criar contador' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        nextNumber = existingCounter.last_number + 1;
+        
+        if (manualModeEnabled && nextNumber < manualModeMinNumber) {
+          nextNumber = manualModeMinNumber;
+        }
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('ticket_counters')
+          .update({ last_number: nextNumber })
+          .eq('id', existingCounter.id);
+
+        if (updateError) {
+          console.error('Error updating counter:', updateError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar contador' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 

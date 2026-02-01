@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +17,8 @@ import {
   UserPlus,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Dialog,
@@ -51,8 +53,10 @@ export default function Reception() {
   // Form state
   const [clientName, setClientName] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
+  const [manualTicketNumber, setManualTicketNumber] = useState('');
   
-  
+  // Get manual mode settings
+  const { manualModeEnabled, manualModeMinNumber, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -134,27 +138,61 @@ export default function Reception() {
       return;
     }
 
+    // Validate manual ticket number if manual mode is enabled
+    if (manualModeEnabled) {
+      const ticketNum = parseInt(manualTicketNumber, 10);
+      
+      if (!manualTicketNumber || isNaN(ticketNum)) {
+        toast.error('Por favor, informe o número da senha');
+        return;
+      }
+      
+      if (ticketNum < manualModeMinNumber) {
+        toast.error(`O número da senha deve ser maior ou igual a ${manualModeMinNumber}`);
+        return;
+      }
+      
+      if (lastGeneratedNumber !== null && ticketNum <= lastGeneratedNumber) {
+        toast.error(`O número da senha deve ser maior que ${lastGeneratedNumber} (última senha gerada)`);
+        return;
+      }
+    }
+
     setIsCreating(true);
 
     try {
       const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
       
+      // Build request body
+      const requestBody: Record<string, unknown> = {
+        unit_id: unitId,
+        ticket_type: ticketType,
+        client_name: clientName.trim(),
+      };
+      
+      // Add manual ticket number if in manual mode
+      if (manualModeEnabled) {
+        requestBody.manual_ticket_number = parseInt(manualTicketNumber, 10);
+      }
+      
       // Call the edge function to create a ticket
       const { data, error } = await supabase.functions.invoke('create-ticket', {
-        body: {
-          unit_id: unitId,
-          ticket_type: ticketType,
-          client_name: clientName.trim(),
-        },
+        body: requestBody,
       });
 
       if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
 
       if (data?.ticket) {
         setCreatedTicket(data.ticket);
         setShowTicketDialog(true);
         setClientName('');
         setTicketType('normal');
+        setManualTicketNumber('');
         toast.success('Senha gerada com sucesso!');
       }
     } catch (error: any) {
@@ -353,6 +391,19 @@ export default function Reception() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Manual Mode Banner */}
+            {manualModeEnabled && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Modo Manual Ativo</p>
+                  <p className="text-amber-600 dark:text-amber-500">
+                    Mínimo: {manualModeMinNumber} | Última gerada: {lastGeneratedNumber ?? 'Nenhuma'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
               <Input
@@ -375,6 +426,24 @@ export default function Reception() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Manual Ticket Number - only show when manual mode is enabled */}
+            {manualModeEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="ticketNumber">Número da Senha *</Label>
+                <Input
+                  id="ticketNumber"
+                  type="number"
+                  placeholder={`Mínimo: ${Math.max(manualModeMinNumber, (lastGeneratedNumber ?? 0) + 1)}`}
+                  value={manualTicketNumber}
+                  onChange={(e) => setManualTicketNumber(e.target.value)}
+                  min={Math.max(manualModeMinNumber, (lastGeneratedNumber ?? 0) + 1)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  O próximo número deve ser maior que {lastGeneratedNumber ?? manualModeMinNumber - 1}
+                </p>
+              </div>
+            )}
 
             <Button 
               size="lg" 
