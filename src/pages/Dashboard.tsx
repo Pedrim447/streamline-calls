@@ -54,8 +54,6 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
-  // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber } = useManualModeSettings(profile?.unit_id);
 
   const { 
     tickets, 
