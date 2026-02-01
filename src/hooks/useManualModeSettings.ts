@@ -29,13 +29,17 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       // Fetch settings
       const { data, error } = await supabase
         .from('settings')
-        .select('manual_mode_enabled, manual_mode_min_number')
+        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
         .eq('unit_id', effectiveUnitId)
         .maybeSingle();
 
       if (data) {
         setManualModeEnabled(data.manual_mode_enabled ?? false);
         setManualModeMinNumber(data.manual_mode_min_number ?? 500);
+        // @ts-ignore - new columns
+        setManualModeMinNumberPreferential(data.manual_mode_min_number_preferential ?? 0);
+        // @ts-ignore - new columns
+        setCallingSystemActive(data.calling_system_active ?? false);
       }
       
       // Fetch last generated ticket number for today
