@@ -8,34 +8,37 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Save, Building, Volume2, Clock, Hand } from 'lucide-react';
+import { Save, Building, Volume2, Clock } from 'lucide-react';
+import { ManualModeSettingsCard } from './ManualModeSettingsCard';
 import type { Database } from '@/integrations/supabase/types';
 
 type Unit = Database['public']['Tables']['units']['Row'];
-type Settings = Database['public']['Tables']['settings']['Row'];
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export function SettingsTab() {
   const { toast } = useToast();
   const [unit, setUnit] = useState<Unit | null>(null);
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form state
+  // Form state - Unit
   const [unitName, setUnitName] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#2563eb');
   const [secondaryColor, setSecondaryColor] = useState('#1e40af');
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [voiceTemplate, setVoiceTemplate] = useState('Senha {ticket}, guichê {counter}');
+  
+  // Form state - Settings
   const [normalPriority, setNormalPriority] = useState(5);
   const [preferentialPriority, setPreferentialPriority] = useState(10);
   const [autoResetDaily, setAutoResetDaily] = useState(true);
   const [resetTime, setResetTime] = useState('00:00');
   const [manualModeEnabled, setManualModeEnabled] = useState(false);
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
+  const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
+  const [callingSystemActive, setCallingSystemActive] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -56,13 +59,16 @@ export function SettingsTab() {
     }
 
     if (settingsRes.data) {
-      setSettings(settingsRes.data);
       setNormalPriority(settingsRes.data.normal_priority ?? 5);
       setPreferentialPriority(settingsRes.data.preferential_priority ?? 10);
       setAutoResetDaily(settingsRes.data.auto_reset_daily ?? true);
       setResetTime(settingsRes.data.reset_time?.slice(0, 5) || '00:00');
       setManualModeEnabled(settingsRes.data.manual_mode_enabled ?? false);
       setManualModeMinNumber(settingsRes.data.manual_mode_min_number ?? 500);
+      // @ts-ignore - new columns
+      setManualModeMinNumberPreferential(settingsRes.data.manual_mode_min_number_preferential ?? 0);
+      // @ts-ignore - new columns
+      setCallingSystemActive(settingsRes.data.calling_system_active ?? false);
     }
 
     setIsLoading(false);

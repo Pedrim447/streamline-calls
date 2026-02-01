@@ -160,11 +160,11 @@ export function ManualModeSettingsCard({
           {/* System Status and Controls */}
           <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-full ${callingSystemActive ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
+              <div className={`p-2 rounded-full ${callingSystemActive ? 'bg-primary/10' : 'bg-muted'}`}>
                 {callingSystemActive ? (
-                  <Play className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <Play className="h-5 w-5 text-primary" />
                 ) : (
-                  <Lock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <Lock className="h-5 w-5 text-muted-foreground" />
                 )}
               </div>
               <div>
