@@ -485,10 +485,20 @@ export default function Reception() {
               size="lg" 
               className="w-full"
               onClick={handleCreateTicket}
-              disabled={isCreating}
+              disabled={isCreating || !callingSystemActive}
             >
               {isCreating ? (
                 <>
+                  <Clock className="h-5 w-5 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Ticket className="h-5 w-5 mr-2" />
+                  Gerar Senha
+                </>
+              )}
+            </Button>
                   <Clock className="h-5 w-5 mr-2 animate-spin" />
                   Gerando...
                 </>
