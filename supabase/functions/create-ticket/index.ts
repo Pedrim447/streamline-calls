@@ -164,20 +164,21 @@ Deno.serve(async (req) => {
         nextNumber = existingCounter.last_number + 1;
         
         if (manualModeEnabled && nextNumber < manualModeMinNumber) {
-        nextNumber = manualModeMinNumber;
-      }
-      
-      const { error: updateError } = await supabaseAdmin
-        .from('ticket_counters')
-        .update({ last_number: nextNumber })
-        .eq('id', existingCounter.id);
+          nextNumber = manualModeMinNumber;
+        }
+        
+        const { error: updateError } = await supabaseAdmin
+          .from('ticket_counters')
+          .update({ last_number: nextNumber })
+          .eq('id', existingCounter.id);
 
-      if (updateError) {
-        console.error('Error updating counter:', updateError);
-        return new Response(
-          JSON.stringify({ error: 'Erro ao atualizar contador' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (updateError) {
+          console.error('Error updating counter:', updateError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar contador' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
