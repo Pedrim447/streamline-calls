@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +17,8 @@ import {
   UserPlus,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Dialog,
@@ -51,8 +53,10 @@ export default function Reception() {
   // Form state
   const [clientName, setClientName] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
+  const [manualTicketNumber, setManualTicketNumber] = useState('');
   
-  
+  // Get manual mode settings
+  const { manualModeEnabled, manualModeMinNumber, lastCalledNumber } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
