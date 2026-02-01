@@ -499,16 +499,6 @@ export default function Reception() {
                 </>
               )}
             </Button>
-                  <Clock className="h-5 w-5 mr-2 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Ticket className="h-5 w-5 mr-2" />
-                  Gerar Senha
-                </>
-              )}
-            </Button>
           </CardContent>
         </Card>
 
