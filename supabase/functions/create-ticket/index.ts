@@ -42,12 +42,22 @@ Deno.serve(async (req) => {
     // Get settings for priority and manual mode
     const { data: settings } = await supabaseAdmin
       .from('settings')
-      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number')
+      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
       .eq('unit_id', unit_id)
       .single();
 
+    // Check if calling system is active
+    const callingSystemActive = settings?.calling_system_active ?? false;
+    if (!callingSystemActive) {
+      return new Response(
+        JSON.stringify({ error: 'Sistema de chamadas não está ativo. Contate o administrador.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const manualModeMinNumber = settings?.manual_mode_min_number ?? 500;
+    const manualModeMinNumberPreferential = settings?.manual_mode_min_number_preferential ?? 0;
 
     let nextNumber: number;
 
