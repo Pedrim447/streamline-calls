@@ -6,6 +6,8 @@ const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 interface ManualModeSettings {
   manualModeEnabled: boolean;
   manualModeMinNumber: number;
+  manualModeMinNumberPreferential: number;
+  callingSystemActive: boolean;
   lastGeneratedNumber: number | null;
   isLoading: boolean;
 }
@@ -13,6 +15,8 @@ interface ManualModeSettings {
 export function useManualModeSettings(unitId?: string): ManualModeSettings {
   const [manualModeEnabled, setManualModeEnabled] = useState(false);
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
+  const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
+  const [callingSystemActive, setCallingSystemActive] = useState(false);
   const [lastGeneratedNumber, setLastGeneratedNumber] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
