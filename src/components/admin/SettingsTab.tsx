@@ -99,6 +99,8 @@ export function SettingsTab() {
           preferential_priority: preferentialPriority,
           auto_reset_daily: autoResetDaily,
           reset_time: resetTime + ':00',
+          manual_mode_enabled: manualModeEnabled,
+          manual_mode_min_number: manualModeMinNumber,
         })
         .eq('unit_id', DEFAULT_UNIT_ID);
 
