@@ -36,7 +36,7 @@ import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
-import { ManualCallDialog } from '@/components/dashboard/ManualCallDialog';
+
 import type { Database } from '@/integrations/supabase/types';
 
 type Counter = Database['public']['Tables']['counters']['Row'];
