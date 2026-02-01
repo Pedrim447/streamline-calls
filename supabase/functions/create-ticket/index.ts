@@ -64,10 +64,15 @@ Deno.serve(async (req) => {
     if (manualModeEnabled && manual_ticket_number !== undefined) {
       // Manual mode with explicit number from reception
       
+      // Determine the minimum based on ticket type
+      const effectiveMinNumber = ticket_type === 'preferential' 
+        ? manualModeMinNumberPreferential 
+        : manualModeMinNumber;
+      
       // Validate minimum
-      if (manual_ticket_number < manualModeMinNumber) {
+      if (manual_ticket_number < effectiveMinNumber) {
         return new Response(
-          JSON.stringify({ error: `Número mínimo permitido é ${manualModeMinNumber}` }),
+          JSON.stringify({ error: `Número mínimo permitido para ${ticket_type === 'preferential' ? 'preferencial' : 'normal'} é ${effectiveMinNumber}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
