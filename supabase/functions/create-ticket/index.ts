@@ -10,6 +10,7 @@ interface CreateTicketRequest {
   ticket_type: 'normal' | 'preferential';
   client_name?: string;
   client_cpf?: string;
+  manual_ticket_number?: number;
 }
 
 Deno.serve(async (req) => {
