@@ -38,6 +38,16 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split('T')[0];
 
+    // Get settings for priority and manual mode
+    const { data: settings } = await supabaseAdmin
+      .from('settings')
+      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number')
+      .eq('unit_id', unit_id)
+      .single();
+
+    const manualModeEnabled = settings?.manual_mode_enabled ?? false;
+    const manualModeMinNumber = settings?.manual_mode_min_number ?? 500;
+
     // Get or create the counter for today
     const { data: existingCounter, error: counterFetchError } = await supabaseAdmin
       .from('ticket_counters')
@@ -49,8 +59,15 @@ Deno.serve(async (req) => {
 
     let nextNumber: number;
     
-    // Starting numbers: Normal starts at 500, Preferential starts at 0
-    const startingNumber = ticket_type === 'preferential' ? 0 : 500;
+    // Determine starting number based on mode
+    let startingNumber: number;
+    if (manualModeEnabled) {
+      // In manual mode, both types start from the admin-defined minimum
+      startingNumber = manualModeMinNumber;
+    } else {
+      // Normal mode: Normal starts at 500, Preferential starts at 0
+      startingNumber = ticket_type === 'preferential' ? 0 : 500;
+    }
 
     if (!existingCounter) {
       // Create new counter for today with appropriate starting number
@@ -78,6 +95,11 @@ Deno.serve(async (req) => {
       // Increment the counter
       nextNumber = existingCounter.last_number + 1;
       
+      // In manual mode, ensure we never go below the minimum
+      if (manualModeEnabled && nextNumber < manualModeMinNumber) {
+        nextNumber = manualModeMinNumber;
+      }
+      
       const { error: updateError } = await supabaseAdmin
         .from('ticket_counters')
         .update({ last_number: nextNumber })
@@ -95,13 +117,6 @@ Deno.serve(async (req) => {
     // Generate display code
     const prefix = ticket_type === 'preferential' ? 'P' : 'N';
     const displayCode = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
-
-    // Get settings for priority
-    const { data: settings } = await supabaseAdmin
-      .from('settings')
-      .select('normal_priority, preferential_priority')
-      .eq('unit_id', unit_id)
-      .single();
 
     const priority = ticket_type === 'preferential' 
       ? (settings?.preferential_priority || 10)
@@ -131,7 +146,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Ticket created successfully:', displayCode);
+    console.log('Ticket created successfully:', displayCode, 'number:', nextNumber);
 
     return new Response(
       JSON.stringify({ success: true, ticket }),
