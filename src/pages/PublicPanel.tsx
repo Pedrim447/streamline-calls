@@ -140,10 +140,13 @@ export default function PublicPanel() {
     setIsAnimating(true);
     setCurrentTicket(ticketWithCounter);
     
-    // Play voice announcement using ref
+    // Play voice announcement using ref with ticket type and client name
     if (counter) {
-      console.log('[PublicPanel] Playing voice for counter:', counter.number);
-      callTicketRef.current(updatedTicket.display_code, counter.number);
+      console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
+      callTicketRef.current(updatedTicket.display_code, counter.number, {
+        ticketType: updatedTicket.ticket_type,
+        clientName: updatedTicket.client_name,
+      });
     }
     
     // Move previous current to history
