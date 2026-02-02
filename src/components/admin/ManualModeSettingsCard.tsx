@@ -113,17 +113,38 @@ export function ManualModeSettingsCard({
         // Reset ticket counters for today
         const today = new Date().toISOString().split('T')[0];
         
-        const { error } = await supabase
+        // Delete ticket counters
+        const { error: counterError } = await supabase
           .from('ticket_counters')
           .delete()
           .eq('unit_id', DEFAULT_UNIT_ID)
           .eq('counter_date', today);
 
-        if (error) throw error;
+        if (counterError) throw counterError;
+
+        // Also delete/cancel all tickets from today (waiting, called, in_service)
+        const { error: ticketError } = await supabase
+          .from('tickets')
+          .delete()
+          .eq('unit_id', DEFAULT_UNIT_ID)
+          .gte('created_at', `${today}T00:00:00`)
+          .in('status', ['waiting', 'called', 'in_service']);
+
+        if (ticketError) throw ticketError;
+
+        // Broadcast reset event to all clients
+        const channel = supabase.channel(`system-reset-${DEFAULT_UNIT_ID}`);
+        await channel.subscribe();
+        await channel.send({
+          type: 'broadcast',
+          event: 'system_reset',
+          payload: { timestamp: new Date().toISOString() },
+        });
+        await supabase.removeChannel(channel);
 
         toast({
           title: 'Sucesso',
-          description: 'Contadores de senha resetados com sucesso',
+          description: 'Sistema resetado com sucesso. Contadores e senhas pendentes foram limpos.',
         });
         
         onSettingsChange();
