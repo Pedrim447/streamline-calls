@@ -281,10 +281,12 @@ export default function PublicPanel() {
     return '-';
   };
 
-  // Format client name for display (capitalize properly)
+  // Format client name for display (first and last name only)
   const formatClientName = (name: string | null): string => {
     if (!name || name.trim().length === 0) return '';
-    return name.trim();
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name.trim();
+    return `${parts[0]} ${parts[parts.length - 1]}`;
   };
 
   return (
