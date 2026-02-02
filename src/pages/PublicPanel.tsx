@@ -23,7 +23,11 @@ export default function PublicPanel() {
   const [isLoading, setIsLoading] = useState(true);
 
   const countersRef = useRef<Record<string, Counter>>({});
-  const callTicketRef = useRef<(code: string, counter: number) => void>(() => {});
+  const callTicketRef = useRef<(
+    code: string, 
+    counter: number,
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
+  ) => void>(() => {});
   const { callTicket } = useVoice();
 
   // Keep refs in sync
