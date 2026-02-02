@@ -193,9 +193,6 @@ export default function PublicPanel() {
     setTimeout(() => setIsAnimating(false), 2000);
   }, []); // No dependencies - uses refs
 
-  // Track called_at to detect repeat calls
-  const lastCalledAtRef = useRef<Record<string, string>>({});
-
   // Subscribe to real-time updates - run once after mount
   useEffect(() => {
     console.log('[PublicPanel] Setting up realtime subscription...');
