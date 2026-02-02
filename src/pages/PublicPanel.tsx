@@ -111,6 +111,13 @@ export default function PublicPanel() {
         
         setCurrentTicket(ticketsWithCounters[0]);
         setLastCalls(ticketsWithCounters.slice(1, 6));
+        
+        // Initialize called_at refs to prevent re-triggering on load
+        ticketData.forEach(ticket => {
+          if (ticket.called_at) {
+            lastCalledAtRef.current[ticket.id] = ticket.called_at;
+          }
+        });
       }
       
       if (isMounted) {
