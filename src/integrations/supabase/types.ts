@@ -266,6 +266,7 @@ export type Database = {
           client_cpf: string | null
           client_name: string | null
           completed_at: string | null
+          completion_status: string | null
           counter_id: string | null
           created_at: string
           display_code: string
@@ -274,6 +275,7 @@ export type Database = {
           locked_by: string | null
           priority: number
           service_started_at: string | null
+          service_type: string | null
           skip_reason: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           ticket_number: number
@@ -288,6 +290,7 @@ export type Database = {
           client_cpf?: string | null
           client_name?: string | null
           completed_at?: string | null
+          completion_status?: string | null
           counter_id?: string | null
           created_at?: string
           display_code: string
@@ -296,6 +299,7 @@ export type Database = {
           locked_by?: string | null
           priority?: number
           service_started_at?: string | null
+          service_type?: string | null
           skip_reason?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number: number
@@ -310,6 +314,7 @@ export type Database = {
           client_cpf?: string | null
           client_name?: string | null
           completed_at?: string | null
+          completion_status?: string | null
           counter_id?: string | null
           created_at?: string
           display_code?: string
@@ -318,6 +323,7 @@ export type Database = {
           locked_by?: string | null
           priority?: number
           service_started_at?: string | null
+          service_type?: string | null
           skip_reason?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number?: number
