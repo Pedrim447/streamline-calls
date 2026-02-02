@@ -21,6 +21,7 @@ import {
   Settings2
 } from 'lucide-react';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
+import { CompleteServiceDialog } from '@/components/dashboard/CompleteServiceDialog';
 import {
   Select,
   SelectContent,
@@ -38,12 +39,13 @@ interface FloatingWidgetProps {
   defaultExpanded?: boolean;
 }
 
-export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWidgetProps) {
+export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidgetProps) {
   const { user, profile } = useAuth();
   const [counter, setCounter] = useState<Counter | null>(null);
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showCounterSelect, setShowCounterSelect] = useState(false);
@@ -115,7 +117,7 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       
-      const newX = Math.max(0, Math.min(window.innerWidth - 200, e.clientX - dragOffset.x));
+      const newX = Math.max(0, Math.min(window.innerWidth - 320, e.clientX - dragOffset.x));
       const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.y));
       
       setPosition({ x: newX, y: newY });
@@ -184,11 +186,12 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
     setIsProcessing(false);
   };
 
-  const handleCompleteService = async () => {
+  const handleCompleteService = async (serviceType: string, completionStatus: string) => {
     if (!currentTicket) return;
     setIsProcessing(true);
-    await completeService(currentTicket.id);
+    await completeService(currentTicket.id, serviceType, completionStatus);
     setCurrentTicket(null);
+    setIsCompleteDialogOpen(false);
     setIsProcessing(false);
   };
 
@@ -207,17 +210,17 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
     return null;
   }
 
-  // Compact width based on state
+  // Width based on state
   const getWidth = () => {
-    if (showCounterSelect) return '200px';
-    if (!isExpanded) return '140px';
-    return '240px';
+    if (showCounterSelect) return '280px';
+    if (!isExpanded) return '180px';
+    return '320px';
   };
 
   return (
     <>
       <Card 
-        className="fixed shadow-xl border border-primary/30 bg-card/95 backdrop-blur-sm z-50 overflow-hidden rounded-xl"
+        className="fixed shadow-2xl border-2 border-primary/20 bg-card z-50 overflow-hidden"
         style={{
           left: position.x,
           top: position.y,
@@ -225,51 +228,51 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
           cursor: isDragging ? 'grabbing' : 'default',
         }}
       >
-        {/* Header - Draggable & Compact */}
+        {/* Header - Draggable */}
         <div 
-          className="bg-primary/10 px-2 py-1.5 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+          className="bg-primary/10 px-3 py-2 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
         >
-          <div className="flex items-center gap-1">
-            <GripVertical className="h-3 w-3 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
             {counter && !showCounterSelect && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                G{counter.number}
+              <Badge variant="secondary" className="text-xs">
+                Guichê {counter.number}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             {counter && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-5 w-5"
+                className="h-6 w-6"
                 onClick={() => setShowCounterSelect(true)}
                 title="Trocar guichê"
               >
-                <Settings2 className="h-2.5 w-2.5" />
+                <Settings2 className="h-3 w-3" />
               </Button>
             )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-5 w-5"
+              className="h-6 w-6"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
-                <Minimize2 className="h-2.5 w-2.5" />
+                <Minimize2 className="h-3 w-3" />
               ) : (
-                <Maximize2 className="h-2.5 w-2.5" />
+                <Maximize2 className="h-3 w-3" />
               )}
             </Button>
             {onClose && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
                 onClick={onClose}
               >
-                <X className="h-2.5 w-2.5" />
+                <X className="h-3 w-3" />
               </Button>
             )}
           </div>
@@ -277,11 +280,11 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
 
         {/* Counter Selection */}
         {showCounterSelect ? (
-          <div className="p-2 space-y-2">
-            <p className="text-[10px] text-muted-foreground text-center">Selecione o guichê</p>
+          <div className="p-3 space-y-3">
+            <p className="text-xs text-muted-foreground text-center">Selecione o guichê de atendimento</p>
             <Select onValueChange={handleSelectCounter}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue placeholder="Guichê..." />
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Escolha um guichê..." />
               </SelectTrigger>
               <SelectContent>
                 {availableCounters.map((c) => (
@@ -300,7 +303,7 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="w-full h-6 text-[10px]"
+                className="w-full"
                 onClick={() => setShowCounterSelect(false)}
               >
                 Cancelar
@@ -309,30 +312,30 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
           </div>
         ) : (
           /* Content */
-          <div className="p-2 space-y-2">
-            {/* Queue Count - Compact */}
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Users className="h-3 w-3" />
+          <div className="p-3 space-y-3">
+            {/* Queue Count */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Users className="h-4 w-4" />
                 Fila
               </span>
-              <Badge variant={waitingCount > 0 ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
-                {waitingCount}
+              <Badge variant={waitingCount > 0 ? "default" : "secondary"}>
+                {waitingCount} aguardando
               </Badge>
             </div>
 
-            {/* Current Ticket - Compact */}
+            {/* Current Ticket */}
             {currentTicket && (
-              <div className="text-center py-1">
+              <div className="text-center py-2">
                 <div 
-                  className={`inline-block px-2 py-1 rounded ${
+                  className={`inline-block px-4 py-2 rounded-lg ${
                     currentTicket.ticket_type === 'preferential'
                       ? 'bg-ticket-preferential/20 border border-ticket-preferential'
                       : 'bg-ticket-normal/20 border border-ticket-normal'
                   }`}
                 >
                   <span 
-                    className={`text-lg font-bold ${
+                    className={`text-2xl font-bold ${
                       currentTicket.ticket_type === 'preferential'
                         ? 'text-ticket-preferential'
                         : 'text-ticket-normal'
@@ -341,43 +344,50 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
                     {currentTicket.display_code}
                   </span>
                 </div>
+                <div className="mt-2">
+                  <Badge 
+                    variant={currentTicket.status === 'in_service' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {currentTicket.status === 'called' ? 'Chamada' : 'Em Atendimento'}
+                  </Badge>
+                </div>
                 {isSpeaking && (
-                  <div className="flex items-center justify-center gap-1 mt-1 text-primary animate-pulse">
-                    <Volume2 className="h-2.5 w-2.5" />
-                    <span className="text-[10px]">Chamando...</span>
+                  <div className="flex items-center justify-center gap-1 mt-2 text-primary animate-pulse">
+                    <Volume2 className="h-3 w-3" />
+                    <span className="text-xs">Chamando...</span>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Actions - Compact */}
+            {/* Actions */}
             {isExpanded && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {!currentTicket ? (
                   <Button 
                     size="sm"
-                    className="w-full h-7 text-xs bg-primary hover:bg-primary/90"
+                    className="w-full bg-primary hover:bg-primary/90"
                     onClick={handleCallNext}
                     disabled={isProcessing || !counter}
                   >
                     {isProcessing ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <PhoneForwarded className="h-3 w-3 mr-1" />
+                      <PhoneForwarded className="h-4 w-4 mr-2" />
                     )}
-                    Chamar
+                    Chamar Próxima
                   </Button>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="grid grid-cols-2 gap-2">
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="h-6 text-[10px]"
                         onClick={handleRepeatCall}
                         disabled={isProcessing || isSpeaking}
                       >
-                        <Volume2 className="h-2.5 w-2.5 mr-0.5" />
+                        <Volume2 className="h-3 w-3 mr-1" />
                         Repetir
                       </Button>
                       
@@ -385,22 +395,21 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
                         <Button 
                           variant="secondary"
                           size="sm"
-                          className="h-6 text-[10px]"
                           onClick={handleStartService}
                           disabled={isProcessing}
                         >
-                          <Play className="h-2.5 w-2.5 mr-0.5" />
+                          <Play className="h-3 w-3 mr-1" />
                           Iniciar
                         </Button>
                       ) : (
                         <Button 
                           size="sm"
-                          className="h-6 text-[10px] bg-green-600 hover:bg-green-700"
-                          onClick={handleCompleteService}
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => setIsCompleteDialogOpen(true)}
                           disabled={isProcessing}
                         >
-                          <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-                          OK
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Finalizar
                         </Button>
                       )}
                     </div>
@@ -408,11 +417,11 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
                     <Button 
                       variant="destructive" 
                       size="sm"
-                      className="w-full h-6 text-[10px]"
+                      className="w-full"
                       onClick={() => setIsSkipDialogOpen(true)}
                       disabled={isProcessing}
                     >
-                      <SkipForward className="h-2.5 w-2.5 mr-0.5" />
+                      <SkipForward className="h-3 w-3 mr-1" />
                       Pular
                     </Button>
                   </>
@@ -424,14 +433,14 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
             {!isExpanded && !currentTicket && (
               <Button 
                 size="sm"
-                className="w-full h-7 bg-primary hover:bg-primary/90"
+                className="w-full bg-primary hover:bg-primary/90"
                 onClick={handleCallNext}
                 disabled={isProcessing || !counter}
               >
                 {isProcessing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <PhoneForwarded className="h-3 w-3" />
+                  <PhoneForwarded className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -445,6 +454,15 @@ export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWid
         onOpenChange={setIsSkipDialogOpen}
         onConfirm={handleSkipTicket}
         ticketCode={currentTicket?.display_code}
+      />
+
+      {/* Complete Service Dialog */}
+      <CompleteServiceDialog
+        open={isCompleteDialogOpen}
+        onOpenChange={setIsCompleteDialogOpen}
+        onConfirm={handleCompleteService}
+        ticketCode={currentTicket?.display_code}
+        isProcessing={isProcessing}
       />
     </>
   );
