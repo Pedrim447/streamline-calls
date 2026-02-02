@@ -501,6 +501,15 @@ export default function Dashboard() {
         ticketCode={currentTicket?.display_code}
       />
 
+      {/* Complete Service Dialog */}
+      <CompleteServiceDialog
+        open={isCompleteDialogOpen}
+        onOpenChange={setIsCompleteDialogOpen}
+        onConfirm={handleCompleteService}
+        ticketCode={currentTicket?.display_code}
+        isProcessing={isProcessing}
+      />
+
     </div>
   );
 }
