@@ -108,11 +108,14 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       .subscribe();
 
     // Listen for system reset broadcast to zero out lastGeneratedNumber
+    // IMPORTANT: Use fixed DEFAULT_UNIT_ID to match the admin broadcast channel
     const resetChannel = supabase
-      .channel(`system-reset-manual-mode-${effectiveUnitId}`)
+      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
       .on('broadcast', { event: 'system_reset' }, () => {
         console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumber');
         setLastGeneratedNumber(null);
+        // Re-fetch to confirm tickets are gone (should return null)
+        fetchSettings();
       })
       .subscribe();
 
