@@ -17,9 +17,17 @@ import {
   Maximize2,
   GripVertical,
   Users,
-  Loader2
+  Loader2,
+  Settings2
 } from 'lucide-react';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Database } from '@/integrations/supabase/types';
 
 type Counter = Database['public']['Tables']['counters']['Row'];
@@ -30,13 +38,15 @@ interface FloatingWidgetProps {
   defaultExpanded?: boolean;
 }
 
-export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidgetProps) {
+export function FloatingWidget({ onClose, defaultExpanded = false }: FloatingWidgetProps) {
   const { user, profile } = useAuth();
   const [counter, setCounter] = useState<Counter | null>(null);
+  const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [showCounterSelect, setShowCounterSelect] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -55,49 +65,33 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
 
   const { callTicket, repeatCallSoft, isSpeaking } = useVoice();
 
-  // Fetch counter for the attendant
+  // Fetch available counters
   useEffect(() => {
-    const fetchCounter = async () => {
-      if (!profile?.unit_id || !user?.id) return;
+    const fetchCounters = async () => {
+      if (!profile?.unit_id) return;
 
-      const { data: existingCounter } = await supabase
-        .from('counters')
-        .select('*')
-        .eq('current_attendant_id', user.id)
-        .eq('unit_id', profile.unit_id)
-        .eq('is_active', true)
-        .single();
-
-      if (existingCounter) {
-        setCounter(existingCounter);
-        return;
-      }
-
-      const { data: availableCounter } = await supabase
+      const { data } = await supabase
         .from('counters')
         .select('*')
         .eq('unit_id', profile.unit_id)
         .eq('is_active', true)
-        .is('current_attendant_id', null)
-        .order('number', { ascending: true })
-        .limit(1)
-        .single();
+        .order('number', { ascending: true });
 
-      if (availableCounter) {
-        const { data: updatedCounter } = await supabase
-          .from('counters')
-          .update({ current_attendant_id: user.id })
-          .eq('id', availableCounter.id)
-          .select()
-          .single();
-
-        if (updatedCounter) {
-          setCounter(updatedCounter);
+      if (data) {
+        setAvailableCounters(data);
+        
+        // Check if user already has a counter assigned
+        const myCounter = data.find(c => c.current_attendant_id === user?.id);
+        if (myCounter) {
+          setCounter(myCounter);
+        } else {
+          // Show counter selection if no counter assigned
+          setShowCounterSelect(true);
         }
       }
     };
 
-    fetchCounter();
+    fetchCounters();
   }, [profile?.unit_id, user?.id]);
 
   // Track current ticket
@@ -121,7 +115,7 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       
-      const newX = Math.max(0, Math.min(window.innerWidth - 320, e.clientX - dragOffset.x));
+      const newX = Math.max(0, Math.min(window.innerWidth - 200, e.clientX - dragOffset.x));
       const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.y));
       
       setPosition({ x: newX, y: newY });
@@ -142,6 +136,24 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     };
   }, [isDragging, dragOffset]);
 
+  const handleSelectCounter = async (counterId: string) => {
+    const selectedCounter = availableCounters.find(c => c.id === counterId);
+    if (!selectedCounter) return;
+
+    // Assign counter to user
+    const { data: updatedCounter } = await supabase
+      .from('counters')
+      .update({ current_attendant_id: user?.id })
+      .eq('id', counterId)
+      .select()
+      .single();
+
+    if (updatedCounter) {
+      setCounter(updatedCounter);
+      setShowCounterSelect(false);
+    }
+  };
+
   const handleCallNext = async () => {
     if (!counter) return;
     setIsProcessing(true);
@@ -149,7 +161,6 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     const ticket = await callNextTicket(counter.id);
     
     if (ticket && counter) {
-      // Voice call immediately for instant feedback
       callTicket(ticket.display_code, counter.number);
     }
     
@@ -161,7 +172,6 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     setIsProcessing(true);
     
     await repeatCall(currentTicket.id);
-    // Use soft voice and gentle chime for repeat calls
     repeatCallSoft(currentTicket.display_code, counter.number);
     
     setIsProcessing(false);
@@ -197,190 +207,236 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     return null;
   }
 
+  // Compact width based on state
+  const getWidth = () => {
+    if (showCounterSelect) return '200px';
+    if (!isExpanded) return '140px';
+    return '240px';
+  };
+
   return (
     <>
       <Card 
-        className="fixed shadow-2xl border-2 border-primary/20 bg-card z-50 overflow-hidden"
+        className="fixed shadow-xl border border-primary/30 bg-card/95 backdrop-blur-sm z-50 overflow-hidden rounded-xl"
         style={{
           left: position.x,
           top: position.y,
-          width: isExpanded ? '320px' : '180px',
+          width: getWidth(),
           cursor: isDragging ? 'grabbing' : 'default',
         }}
       >
-        {/* Header - Draggable */}
+        {/* Header - Draggable & Compact */}
         <div 
-          className="bg-primary/10 px-3 py-2 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+          className="bg-primary/10 px-2 py-1.5 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
           onMouseDown={handleMouseDown}
         >
-          <div className="flex items-center gap-2">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-            {counter && (
-              <Badge variant="secondary" className="text-xs">
-                Guichê {counter.number}
+          <div className="flex items-center gap-1">
+            <GripVertical className="h-3 w-3 text-muted-foreground" />
+            {counter && !showCounterSelect && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                G{counter.number}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
+            {counter && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5"
+                onClick={() => setShowCounterSelect(true)}
+                title="Trocar guichê"
+              >
+                <Settings2 className="h-2.5 w-2.5" />
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6"
+              className="h-5 w-5"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? (
-                <Minimize2 className="h-3 w-3" />
+                <Minimize2 className="h-2.5 w-2.5" />
               ) : (
-                <Maximize2 className="h-3 w-3" />
+                <Maximize2 className="h-2.5 w-2.5" />
               )}
             </Button>
             {onClose && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-5 w-5 text-muted-foreground hover:text-destructive"
                 onClick={onClose}
               >
-                <X className="h-3 w-3" />
+                <X className="h-2.5 w-2.5" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-3 space-y-3">
-          {/* Queue Count */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              Fila
-            </span>
-            <Badge variant={waitingCount > 0 ? "default" : "secondary"}>
-              {waitingCount} aguardando
-            </Badge>
-          </div>
-
-          {/* Current Ticket */}
-          {currentTicket && (
-            <div className="text-center py-2">
-              <div 
-                className={`inline-block px-4 py-2 rounded-lg ${
-                  currentTicket.ticket_type === 'preferential'
-                    ? 'bg-ticket-preferential/20 border border-ticket-preferential'
-                    : 'bg-ticket-normal/20 border border-ticket-normal'
-                }`}
+        {/* Counter Selection */}
+        {showCounterSelect ? (
+          <div className="p-2 space-y-2">
+            <p className="text-[10px] text-muted-foreground text-center">Selecione o guichê</p>
+            <Select onValueChange={handleSelectCounter}>
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="Guichê..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCounters.map((c) => (
+                  <SelectItem 
+                    key={c.id} 
+                    value={c.id}
+                    disabled={c.current_attendant_id !== null && c.current_attendant_id !== user?.id}
+                  >
+                    Guichê {c.number} {c.name ? `- ${c.name}` : ''}
+                    {c.current_attendant_id && c.current_attendant_id !== user?.id && ' (ocupado)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {counter && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full h-6 text-[10px]"
+                onClick={() => setShowCounterSelect(false)}
               >
-                <span 
-                  className={`text-2xl font-bold ${
+                Cancelar
+              </Button>
+            )}
+          </div>
+        ) : (
+          /* Content */
+          <div className="p-2 space-y-2">
+            {/* Queue Count - Compact */}
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Users className="h-3 w-3" />
+                Fila
+              </span>
+              <Badge variant={waitingCount > 0 ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                {waitingCount}
+              </Badge>
+            </div>
+
+            {/* Current Ticket - Compact */}
+            {currentTicket && (
+              <div className="text-center py-1">
+                <div 
+                  className={`inline-block px-2 py-1 rounded ${
                     currentTicket.ticket_type === 'preferential'
-                      ? 'text-ticket-preferential'
-                      : 'text-ticket-normal'
+                      ? 'bg-ticket-preferential/20 border border-ticket-preferential'
+                      : 'bg-ticket-normal/20 border border-ticket-normal'
                   }`}
                 >
-                  {currentTicket.display_code}
-                </span>
-              </div>
-              <div className="mt-2">
-                <Badge 
-                  variant={currentTicket.status === 'in_service' ? 'default' : 'secondary'}
-                  className="text-xs"
-                >
-                  {currentTicket.status === 'called' ? 'Chamada' : 'Em Atendimento'}
-                </Badge>
-              </div>
-              {isSpeaking && (
-                <div className="flex items-center justify-center gap-1 mt-2 text-primary animate-pulse">
-                  <Volume2 className="h-3 w-3" />
-                  <span className="text-xs">Chamando...</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Actions */}
-          {isExpanded && (
-            <div className="space-y-2">
-              {!currentTicket ? (
-                <Button 
-                  size="sm"
-                  className="w-full bg-primary hover:bg-primary/90"
-                  onClick={handleCallNext}
-                  disabled={isProcessing || !counter}
-                >
-                  {isProcessing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <PhoneForwarded className="h-4 w-4 mr-2" />
-                  )}
-                  Chamar Próxima
-                </Button>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleRepeatCall}
-                      disabled={isProcessing || isSpeaking}
-                    >
-                      <Volume2 className="h-3 w-3 mr-1" />
-                      Repetir
-                    </Button>
-                    
-                    {currentTicket.status === 'called' ? (
-                      <Button 
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleStartService}
-                        disabled={isProcessing}
-                      >
-                        <Play className="h-3 w-3 mr-1" />
-                        Iniciar
-                      </Button>
-                    ) : (
-                      <Button 
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={handleCompleteService}
-                        disabled={isProcessing}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Finalizar
-                      </Button>
-                    )}
-                  </div>
-
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    className="w-full"
-                    onClick={() => setIsSkipDialogOpen(true)}
-                    disabled={isProcessing}
+                  <span 
+                    className={`text-lg font-bold ${
+                      currentTicket.ticket_type === 'preferential'
+                        ? 'text-ticket-preferential'
+                        : 'text-ticket-normal'
+                    }`}
                   >
-                    <SkipForward className="h-3 w-3 mr-1" />
-                    Pular
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
+                    {currentTicket.display_code}
+                  </span>
+                </div>
+                {isSpeaking && (
+                  <div className="flex items-center justify-center gap-1 mt-1 text-primary animate-pulse">
+                    <Volume2 className="h-2.5 w-2.5" />
+                    <span className="text-[10px]">Chamando...</span>
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* Minimized Quick Action */}
-          {!isExpanded && !currentTicket && (
-            <Button 
-              size="sm"
-              className="w-full bg-primary hover:bg-primary/90"
-              onClick={handleCallNext}
-              disabled={isProcessing || !counter}
-            >
-              {isProcessing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <PhoneForwarded className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
+            {/* Actions - Compact */}
+            {isExpanded && (
+              <div className="space-y-1.5">
+                {!currentTicket ? (
+                  <Button 
+                    size="sm"
+                    className="w-full h-7 text-xs bg-primary hover:bg-primary/90"
+                    onClick={handleCallNext}
+                    disabled={isProcessing || !counter}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <PhoneForwarded className="h-3 w-3 mr-1" />
+                    )}
+                    Chamar
+                  </Button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="h-6 text-[10px]"
+                        onClick={handleRepeatCall}
+                        disabled={isProcessing || isSpeaking}
+                      >
+                        <Volume2 className="h-2.5 w-2.5 mr-0.5" />
+                        Repetir
+                      </Button>
+                      
+                      {currentTicket.status === 'called' ? (
+                        <Button 
+                          variant="secondary"
+                          size="sm"
+                          className="h-6 text-[10px]"
+                          onClick={handleStartService}
+                          disabled={isProcessing}
+                        >
+                          <Play className="h-2.5 w-2.5 mr-0.5" />
+                          Iniciar
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm"
+                          className="h-6 text-[10px] bg-green-600 hover:bg-green-700"
+                          onClick={handleCompleteService}
+                          disabled={isProcessing}
+                        >
+                          <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                          OK
+                        </Button>
+                      )}
+                    </div>
+
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      className="w-full h-6 text-[10px]"
+                      onClick={() => setIsSkipDialogOpen(true)}
+                      disabled={isProcessing}
+                    >
+                      <SkipForward className="h-2.5 w-2.5 mr-0.5" />
+                      Pular
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Minimized Quick Action */}
+            {!isExpanded && !currentTicket && (
+              <Button 
+                size="sm"
+                className="w-full h-7 bg-primary hover:bg-primary/90"
+                onClick={handleCallNext}
+                disabled={isProcessing || !counter}
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <PhoneForwarded className="h-3 w-3" />
+                )}
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Skip Dialog */}
