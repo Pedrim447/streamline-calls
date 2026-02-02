@@ -122,13 +122,12 @@ export function ManualModeSettingsCard({
 
         if (counterError) throw counterError;
 
-        // Also delete/cancel all tickets from today (waiting, called, in_service)
+        // Delete ALL tickets from today (including completed, cancelled, skipped)
         const { error: ticketError } = await supabase
           .from('tickets')
           .delete()
           .eq('unit_id', DEFAULT_UNIT_ID)
-          .gte('created_at', `${today}T00:00:00`)
-          .in('status', ['waiting', 'called', 'in_service']);
+          .gte('created_at', `${today}T00:00:00`);
 
         if (ticketError) throw ticketError;
 

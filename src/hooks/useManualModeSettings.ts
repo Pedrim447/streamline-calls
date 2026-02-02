@@ -107,9 +107,19 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       )
       .subscribe();
 
+    // Listen for system reset broadcast to zero out lastGeneratedNumber
+    const resetChannel = supabase
+      .channel(`system-reset-manual-mode-${effectiveUnitId}`)
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumber');
+        setLastGeneratedNumber(null);
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(resetChannel);
     };
   }, [effectiveUnitId]);
 
