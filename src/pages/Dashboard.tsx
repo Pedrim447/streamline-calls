@@ -34,6 +34,7 @@ import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
+import { CompleteServiceDialog } from '@/components/dashboard/CompleteServiceDialog';
 
 import type { Database } from '@/integrations/supabase/types';
 
