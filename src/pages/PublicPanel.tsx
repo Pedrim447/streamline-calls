@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
-import { Maximize, Volume2, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Maximize, Volume2, VolumeX, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -21,14 +22,16 @@ export default function PublicPanel() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   const countersRef = useRef<Record<string, Counter>>({});
+  const soundEnabledRef = useRef(false);
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
     options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
   ) => void>(() => {});
-  const { callTicket } = useVoice();
+  const { callTicket, playAlertSound } = useVoice();
 
   // Keep refs in sync
   useEffect(() => {
@@ -38,6 +41,18 @@ export default function PublicPanel() {
   useEffect(() => {
     callTicketRef.current = callTicket;
   }, [callTicket]);
+
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
+  // Enable sound with user interaction
+  const enableSound = useCallback(() => {
+    // Play a test sound to unlock audio context
+    playAlertSound();
+    setSoundEnabled(true);
+    console.log('[PublicPanel] Sound enabled by user interaction');
+  }, [playAlertSound]);
 
   // Update clock every second
   useEffect(() => {
@@ -141,12 +156,15 @@ export default function PublicPanel() {
     setCurrentTicket(ticketWithCounter);
     
     // Play voice announcement using ref with ticket type and client name
-    if (counter) {
+    // Only play if sound is enabled by user interaction
+    if (counter && soundEnabledRef.current) {
       console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
       callTicketRef.current(updatedTicket.display_code, counter.number, {
         ticketType: updatedTicket.ticket_type,
         clientName: updatedTicket.client_name,
       });
+    } else if (!soundEnabledRef.current) {
+      console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
     
     // Move previous current to history
@@ -240,11 +258,40 @@ export default function PublicPanel() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
+      {/* Sound Enable Overlay */}
+      {!soundEnabled && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+          <div className="text-center space-y-6">
+            <div className="w-24 h-24 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
+              <VolumeX className="w-12 h-12 text-primary" />
+            </div>
+            <h2 className="text-3xl font-bold">Ativar Som do Painel</h2>
+            <p className="text-white/70 max-w-md">
+              Clique no botão abaixo para ativar as chamadas de voz e alertas sonoros.
+            </p>
+            <Button 
+              size="lg" 
+              onClick={enableSound}
+              className="text-xl px-8 py-6"
+            >
+              <Volume2 className="w-6 h-6 mr-3" />
+              Ativar Som
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-4 bg-black/30">
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
           <span className="text-lg font-medium text-white/80">Sistema de Senhas</span>
+          {soundEnabled && (
+            <Badge variant="outline" className="text-green-400 border-green-400/50">
+              <Volume2 className="w-3 h-3 mr-1" />
+              Som Ativo
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 text-white/70">
@@ -340,7 +387,7 @@ export default function PublicPanel() {
               </div>
 
               {/* Speaking indicator */}
-              {isAnimating && (
+              {isAnimating && soundEnabled && (
                 <div className="mt-8 flex items-center justify-center gap-3 text-white/70 animate-pulse">
                   <Volume2 className="h-8 w-8" />
                   <span className="text-2xl">Chamando...</span>
