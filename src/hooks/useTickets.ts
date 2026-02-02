@@ -146,12 +146,24 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
     channelRef.current = channel;
 
+    // Listen for system reset broadcast
+    const resetChannel = supabase
+      .channel(`system-reset-tickets-${effectiveUnitId}`)
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[Realtime] System reset broadcast received');
+        // Clear local tickets and refetch
+        setTickets([]);
+        fetchTickets();
+      })
+      .subscribe();
+
     return () => {
       console.log('[Realtime] Cleaning up channel');
       supabase.removeChannel(channel);
+      supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
-  }, [realtime, effectiveUnitId, status]);
+  }, [realtime, effectiveUnitId, status, fetchTickets]);
 
   const callNextTicket = async (counterId: string) => {
     if (!effectiveUnitId) {

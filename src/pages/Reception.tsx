@@ -117,8 +117,18 @@ export default function Reception() {
         console.log('[Reception] Subscription status:', status);
       });
 
+    // Listen for system reset broadcast
+    const resetChannel = supabase
+      .channel(`system-reset-${unitId}`)
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[Reception] System reset broadcast received');
+        fetchTickets();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(resetChannel);
     };
   }, [profile?.unit_id, user?.id]);
 
