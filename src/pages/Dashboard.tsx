@@ -51,6 +51,7 @@ export default function Dashboard() {
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
