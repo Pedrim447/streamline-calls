@@ -211,12 +211,17 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
-  const handleCompleteService = async () => {
+  const handleOpenCompleteDialog = () => {
+    setIsCompleteDialogOpen(true);
+  };
+
+  const handleCompleteService = async (serviceType: string, completionStatus: string) => {
     if (!currentTicket) return;
     setIsProcessing(true);
     
-    await completeService(currentTicket.id);
+    await completeService(currentTicket.id, serviceType, completionStatus);
     setCurrentTicket(null);
+    setIsCompleteDialogOpen(false);
     
     setIsProcessing(false);
   };
