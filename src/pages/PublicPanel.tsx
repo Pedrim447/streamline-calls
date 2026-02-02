@@ -198,7 +198,7 @@ export default function PublicPanel() {
     console.log('[PublicPanel] Setting up realtime subscription...');
     
     const channel = supabase
-      .channel('public-panel-tickets')
+      .channel('public-panel-tickets-v2')
       .on(
         'postgres_changes',
         {
@@ -214,18 +214,33 @@ export default function PublicPanel() {
           // Check if this is a called/in_service ticket with called_at
           if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
             const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
-            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
-            const isNewCall = !previousCalledAt && oldTicket.status === 'waiting';
             
-            // Update ref
+            // Detect new call: status changed from waiting to called/in_service
+            const isNewCall = oldTicket.status === 'waiting';
+            
+            // Detect repeat call: called_at timestamp changed
+            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at && !isNewCall;
+            
+            // Update ref with new called_at
             lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
             
-            // Trigger voice for new calls or repeat calls (called_at changed)
+            // Trigger voice for new calls or repeat calls
             if (isNewCall || isRepeatCall) {
               console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
               handleNewCall(updatedTicket, isRepeatCall);
             }
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tickets',
+        },
+        (payload) => {
+          console.log('[PublicPanel] Ticket inserted:', payload);
         }
       )
       .on(
@@ -237,7 +252,6 @@ export default function PublicPanel() {
         },
         () => {
           console.log('[PublicPanel] Ticket deleted, clearing display...');
-          // Reload data when tickets are deleted (e.g., on reset)
           setCurrentTicket(null);
           setLastCalls([]);
           lastCalledAtRef.current = {};
@@ -249,7 +263,7 @@ export default function PublicPanel() {
 
     // Listen for system reset broadcast
     const resetChannel = supabase
-      .channel('system-reset-public')
+      .channel('system-reset-public-v2')
       .on('broadcast', { event: 'system_reset' }, () => {
         console.log('[PublicPanel] System reset broadcast received');
         setCurrentTicket(null);
@@ -263,7 +277,7 @@ export default function PublicPanel() {
       supabase.removeChannel(channel);
       supabase.removeChannel(resetChannel);
     };
-  }, [handleNewCall]); // handleNewCall is now stable
+  }, [handleNewCall]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -281,10 +295,12 @@ export default function PublicPanel() {
     return '-';
   };
 
-  // Format client name for display (capitalize properly)
+  // Format client name for display (first and last name only)
   const formatClientName = (name: string | null): string => {
     if (!name || name.trim().length === 0) return '';
-    return name.trim();
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name.trim();
+    return `${parts[0]} ${parts[parts.length - 1]}`;
   };
 
   return (
