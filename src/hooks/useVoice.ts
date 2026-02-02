@@ -59,6 +59,12 @@ function numberToWords(num: number): string {
   return result;
 }
 
+export interface CallTicketOptions {
+  withSound?: boolean;
+  ticketType?: 'normal' | 'preferential';
+  clientName?: string | null;
+}
+
 export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const voiceSettings = { ...defaultSettings, ...settings };
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -91,7 +97,13 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     };
   }, []);
 
-  const speak = useCallback((ticketCode: string, counterNumber: number | string, isSoft = false) => {
+  const speak = useCallback((
+    ticketCode: string, 
+    counterNumber: number | string, 
+    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+  ) => {
+    const { isSoft = false, ticketType, clientName } = options;
+    
     if (!voiceSettings.enabled) {
       console.log('Voice disabled in settings');
       return;
@@ -112,19 +124,32 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
       return;
     }
 
-    const [, ticketType, ticketNumberStr] = match;
+    const [, ticketPrefix, ticketNumberStr] = match;
     const ticketNumber = parseInt(ticketNumberStr, 10);
     const counterNum = typeof counterNumber === 'string' ? parseInt(counterNumber, 10) : counterNumber;
 
-    // Convert to spoken format
-    const ticketTypeSpoken = ticketType === 'P' ? 'preferencial' : 'normal';
+    // Determine ticket type from parameter or prefix
+    let ticketTypeSpoken: string;
+    if (ticketType) {
+      ticketTypeSpoken = ticketType === 'preferential' ? 'preferencial' : 'normal';
+    } else {
+      ticketTypeSpoken = ticketPrefix === 'P' ? 'preferencial' : 'normal';
+    }
+    
     const ticketNumberSpoken = numberToWords(ticketNumber);
     const counterSpoken = numberToWords(counterNum);
 
-    // Build the message
-    let message = voiceSettings.template
-      .replace('{ticket}', `${ticketTypeSpoken} ${ticketNumberSpoken}`)
-      .replace('{counter}', counterSpoken);
+    // Build the complete message
+    let message = '';
+    
+    // Add client name greeting if available
+    if (clientName && clientName.trim().length > 0) {
+      const firstName = clientName.trim().split(' ')[0];
+      message = `Atenção ${firstName}. `;
+    }
+    
+    // Add ticket info with type
+    message += `Senha ${ticketTypeSpoken} ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
 
     console.log('Speaking:', message);
 
@@ -229,24 +254,36 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     playNote(659.25, 0.15, 0.7, 0.12);   // E5 - even quieter
   }, []);
 
-  const callTicket = useCallback((ticketCode: string, counterNumber: number | string, withSound = true) => {
+  const callTicket = useCallback((
+    ticketCode: string, 
+    counterNumber: number | string, 
+    options: CallTicketOptions = {}
+  ) => {
+    const { withSound = true, ticketType, clientName } = options;
+    
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber, false);
+        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
       }, 600);
     } else {
-      speak(ticketCode, counterNumber, false);
+      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
     }
   }, [speak, playAlertSound]);
 
   // Soft repeat call with gentle chime and calmer voice
-  const repeatCallSoft = useCallback((ticketCode: string, counterNumber: number | string) => {
+  const repeatCallSoft = useCallback((
+    ticketCode: string, 
+    counterNumber: number | string,
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+  ) => {
+    const { ticketType, clientName } = options;
+    
     playSoftChime();
     // Small delay before soft voice
     setTimeout(() => {
-      speak(ticketCode, counterNumber, true);
+      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName });
     }, 500);
   }, [speak, playSoftChime]);
 
@@ -258,5 +295,6 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     playAlertSound,
     playSoftChime,
     isSpeaking,
+    voicesLoaded,
   };
 }
