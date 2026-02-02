@@ -117,14 +117,18 @@ export default function Reception() {
         console.log('[Reception] Subscription status:', status);
       });
 
-    // Listen for system reset broadcast
+    // Listen for system reset broadcast - use fixed DEFAULT_UNIT_ID to match admin broadcast
     const resetChannel = supabase
-      .channel(`system-reset-${unitId}`)
+      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
       .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[Reception] System reset broadcast received');
+        console.log('[Reception] System reset broadcast received - clearing tickets');
+        setTickets([]);
         fetchTickets();
+        toast.info('Sistema resetado pelo administrador');
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Reception] Reset channel status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
