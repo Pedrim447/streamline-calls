@@ -34,6 +34,7 @@ import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
+import { CompleteServiceDialog } from '@/components/dashboard/CompleteServiceDialog';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
   const [currentTicket, setCurrentTicket] = useState<Ticket | null>(null);
   const [isSkipDialogOpen, setIsSkipDialogOpen] = useState(false);
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
@@ -209,12 +211,17 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
-  const handleCompleteService = async () => {
+  const handleOpenCompleteDialog = () => {
+    setIsCompleteDialogOpen(true);
+  };
+
+  const handleCompleteService = async (serviceType: string, completionStatus: string) => {
     if (!currentTicket) return;
     setIsProcessing(true);
     
-    await completeService(currentTicket.id);
+    await completeService(currentTicket.id, serviceType, completionStatus);
     setCurrentTicket(null);
+    setIsCompleteDialogOpen(false);
     
     setIsProcessing(false);
   };
@@ -386,7 +393,7 @@ export default function Dashboard() {
                 nextTickets={waitingTickets.slice(0, 5)}
                 onRepeatCall={handleRepeatCall}
                 onStartService={handleStartService}
-                onCompleteService={handleCompleteService}
+                onCompleteService={handleOpenCompleteDialog}
                 onSkipTicket={() => setIsSkipDialogOpen(true)}
               />
 
@@ -452,7 +459,7 @@ export default function Dashboard() {
                         <Button 
                           variant="default"
                           className="bg-green-600 hover:bg-green-700 text-white"
-                          onClick={handleCompleteService}
+                          onClick={handleOpenCompleteDialog}
                           disabled={isProcessing}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -492,6 +499,15 @@ export default function Dashboard() {
         onOpenChange={setIsSkipDialogOpen}
         onConfirm={handleSkipTicket}
         ticketCode={currentTicket?.display_code}
+      />
+
+      {/* Complete Service Dialog */}
+      <CompleteServiceDialog
+        open={isCompleteDialogOpen}
+        onOpenChange={setIsCompleteDialogOpen}
+        onConfirm={handleCompleteService}
+        ticketCode={currentTicket?.display_code}
+        isProcessing={isProcessing}
       />
 
     </div>

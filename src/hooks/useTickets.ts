@@ -264,13 +264,15 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
   };
 
-  const completeService = async (ticketId: string) => {
+  const completeService = async (ticketId: string, serviceType?: string, completionStatus?: string) => {
     try {
       const { error } = await supabase
         .from('tickets')
         .update({
           status: 'completed' as TicketStatus,
           completed_at: new Date().toISOString(),
+          service_type: serviceType || null,
+          completion_status: completionStatus || null,
         })
         .eq('id', ticketId);
 
