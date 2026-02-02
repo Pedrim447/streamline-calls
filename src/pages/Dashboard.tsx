@@ -393,7 +393,7 @@ export default function Dashboard() {
                 nextTickets={waitingTickets.slice(0, 5)}
                 onRepeatCall={handleRepeatCall}
                 onStartService={handleStartService}
-                onCompleteService={handleCompleteService}
+                onCompleteService={handleOpenCompleteDialog}
                 onSkipTicket={() => setIsSkipDialogOpen(true)}
               />
 
