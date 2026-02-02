@@ -26,6 +26,7 @@ export default function PublicPanel() {
 
   const countersRef = useRef<Record<string, Counter>>({});
   const soundEnabledRef = useRef(false);
+  const lastCalledAtRef = useRef<Record<string, string>>({});
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
@@ -111,6 +112,13 @@ export default function PublicPanel() {
         
         setCurrentTicket(ticketsWithCounters[0]);
         setLastCalls(ticketsWithCounters.slice(1, 6));
+        
+        // Initialize called_at refs to prevent re-triggering on load
+        ticketData.forEach(ticket => {
+          if (ticket.called_at) {
+            lastCalledAtRef.current[ticket.id] = ticket.called_at;
+          }
+        });
       }
       
       if (isMounted) {
@@ -126,8 +134,8 @@ export default function PublicPanel() {
   }, []);
 
   // Handle new call - stable function using refs
-  const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
-    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
+  const handleNewCall = useCallback(async (updatedTicket: Ticket, isCurrentTicketUpdate: boolean = false) => {
+    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code, 'isUpdate:', isCurrentTicketUpdate);
     
     // Fetch counter info using ref
     let counter = updatedTicket.counter_id ? countersRef.current[updatedTicket.counter_id] : undefined;
@@ -153,7 +161,22 @@ export default function PublicPanel() {
     };
     
     setIsAnimating(true);
-    setCurrentTicket(ticketWithCounter);
+    
+    // If this is a new ticket (not repeat of current), move current to history
+    if (!isCurrentTicketUpdate) {
+      setCurrentTicket(prev => {
+        if (prev && prev.id !== updatedTicket.id) {
+          // Move previous current to history
+          setLastCalls(prevCalls => {
+            const filtered = prevCalls.filter(t => t.id !== prev.id && t.id !== updatedTicket.id);
+            return [prev, ...filtered].slice(0, 5);
+          });
+        }
+        return ticketWithCounter;
+      });
+    } else {
+      setCurrentTicket(ticketWithCounter);
+    }
     
     // Play voice announcement using ref with ticket type and client name
     // Only play if sound is enabled by user interaction
@@ -166,12 +189,6 @@ export default function PublicPanel() {
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
-    
-    // Move previous current to history
-    setLastCalls(prev => {
-      const filtered = prev.filter(t => t.id !== updatedTicket.id);
-      return filtered.slice(0, 4);
-    });
     
     setTimeout(() => setIsAnimating(false), 2000);
   }, []); // No dependencies - uses refs
@@ -192,10 +209,22 @@ export default function PublicPanel() {
         (payload) => {
           console.log('[PublicPanel] Ticket updated:', payload);
           const updatedTicket = payload.new as Ticket;
+          const oldTicket = payload.old as Partial<Ticket>;
           
-          // If a ticket was just called, trigger animation and voice
-          if (updatedTicket.status === 'called' && updatedTicket.called_at) {
-            handleNewCall(updatedTicket);
+          // Check if this is a called/in_service ticket with called_at
+          if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
+            const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
+            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
+            const isNewCall = !previousCalledAt && oldTicket.status === 'waiting';
+            
+            // Update ref
+            lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
+            
+            // Trigger voice for new calls or repeat calls (called_at changed)
+            if (isNewCall || isRepeatCall) {
+              console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
+              handleNewCall(updatedTicket, isRepeatCall);
+            }
           }
         }
       )
@@ -211,6 +240,7 @@ export default function PublicPanel() {
           // Reload data when tickets are deleted (e.g., on reset)
           setCurrentTicket(null);
           setLastCalls([]);
+          lastCalledAtRef.current = {};
         }
       )
       .subscribe((status) => {
@@ -224,6 +254,7 @@ export default function PublicPanel() {
         console.log('[PublicPanel] System reset broadcast received');
         setCurrentTicket(null);
         setLastCalls([]);
+        lastCalledAtRef.current = {};
       })
       .subscribe();
 

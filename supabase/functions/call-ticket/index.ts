@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get the ticket
+      // Get the ticket with counter info
       const { data: ticket, error: ticketError } = await supabaseAdmin
         .from('tickets')
         .select('*')
@@ -158,6 +158,20 @@ Deno.serve(async (req) => {
 
       console.log('Repeating call for ticket:', ticket.display_code);
 
+      // Update called_at to trigger realtime update for panel
+      const { data: updatedTicket, error: updateError } = await supabaseAdmin
+        .from('tickets')
+        .update({
+          called_at: new Date().toISOString(),
+        })
+        .eq('id', ticket_id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating ticket for repeat:', updateError);
+      }
+
       // Log the repeat action
       await supabaseAdmin.from('audit_logs').insert({
         action: 'ticket_repeat_call',
@@ -169,7 +183,7 @@ Deno.serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, ticket }),
+        JSON.stringify({ success: true, ticket: updatedTicket || ticket, is_repeat: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
