@@ -126,8 +126,8 @@ export default function PublicPanel() {
   }, []);
 
   // Handle new call - stable function using refs
-  const handleNewCall = useCallback(async (updatedTicket: Ticket) => {
-    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code);
+  const handleNewCall = useCallback(async (updatedTicket: Ticket, isCurrentTicketUpdate: boolean = false) => {
+    console.log('[PublicPanel] Handling new call:', updatedTicket.display_code, 'isUpdate:', isCurrentTicketUpdate);
     
     // Fetch counter info using ref
     let counter = updatedTicket.counter_id ? countersRef.current[updatedTicket.counter_id] : undefined;
@@ -153,7 +153,22 @@ export default function PublicPanel() {
     };
     
     setIsAnimating(true);
-    setCurrentTicket(ticketWithCounter);
+    
+    // If this is a new ticket (not repeat of current), move current to history
+    if (!isCurrentTicketUpdate) {
+      setCurrentTicket(prev => {
+        if (prev && prev.id !== updatedTicket.id) {
+          // Move previous current to history
+          setLastCalls(prevCalls => {
+            const filtered = prevCalls.filter(t => t.id !== prev.id && t.id !== updatedTicket.id);
+            return [prev, ...filtered].slice(0, 5);
+          });
+        }
+        return ticketWithCounter;
+      });
+    } else {
+      setCurrentTicket(ticketWithCounter);
+    }
     
     // Play voice announcement using ref with ticket type and client name
     // Only play if sound is enabled by user interaction
@@ -166,12 +181,6 @@ export default function PublicPanel() {
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
-    
-    // Move previous current to history
-    setLastCalls(prev => {
-      const filtered = prev.filter(t => t.id !== updatedTicket.id);
-      return filtered.slice(0, 4);
-    });
     
     setTimeout(() => setIsAnimating(false), 2000);
   }, []); // No dependencies - uses refs
