@@ -181,13 +181,38 @@ export default function PublicPanel() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => {
+          console.log('[PublicPanel] Ticket deleted, clearing display...');
+          // Reload data when tickets are deleted (e.g., on reset)
+          setCurrentTicket(null);
+          setLastCalls([]);
+        }
+      )
       .subscribe((status) => {
         console.log('[PublicPanel] Realtime status:', status);
       });
 
+    // Listen for system reset broadcast
+    const resetChannel = supabase
+      .channel('system-reset-public')
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[PublicPanel] System reset broadcast received');
+        setCurrentTicket(null);
+        setLastCalls([]);
+      })
+      .subscribe();
+
     return () => {
       console.log('[PublicPanel] Cleaning up realtime...');
       supabase.removeChannel(channel);
+      supabase.removeChannel(resetChannel);
     };
   }, [handleNewCall]); // handleNewCall is now stable
 
