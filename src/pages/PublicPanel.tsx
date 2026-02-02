@@ -26,6 +26,7 @@ export default function PublicPanel() {
 
   const countersRef = useRef<Record<string, Counter>>({});
   const soundEnabledRef = useRef(false);
+  const lastCalledAtRef = useRef<Record<string, string>>({});
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
