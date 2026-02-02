@@ -185,6 +185,9 @@ export default function PublicPanel() {
     setTimeout(() => setIsAnimating(false), 2000);
   }, []); // No dependencies - uses refs
 
+  // Track called_at to detect repeat calls
+  const lastCalledAtRef = useRef<Record<string, string>>({});
+
   // Subscribe to real-time updates - run once after mount
   useEffect(() => {
     console.log('[PublicPanel] Setting up realtime subscription...');
@@ -201,10 +204,22 @@ export default function PublicPanel() {
         (payload) => {
           console.log('[PublicPanel] Ticket updated:', payload);
           const updatedTicket = payload.new as Ticket;
+          const oldTicket = payload.old as Partial<Ticket>;
           
-          // If a ticket was just called, trigger animation and voice
-          if (updatedTicket.status === 'called' && updatedTicket.called_at) {
-            handleNewCall(updatedTicket);
+          // Check if this is a called/in_service ticket with called_at
+          if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
+            const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
+            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
+            const isNewCall = !previousCalledAt && oldTicket.status === 'waiting';
+            
+            // Update ref
+            lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
+            
+            // Trigger voice for new calls or repeat calls (called_at changed)
+            if (isNewCall || isRepeatCall) {
+              console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
+              handleNewCall(updatedTicket, isRepeatCall);
+            }
           }
         }
       )
@@ -220,6 +235,7 @@ export default function PublicPanel() {
           // Reload data when tickets are deleted (e.g., on reset)
           setCurrentTicket(null);
           setLastCalls([]);
+          lastCalledAtRef.current = {};
         }
       )
       .subscribe((status) => {
@@ -233,6 +249,7 @@ export default function PublicPanel() {
         console.log('[PublicPanel] System reset broadcast received');
         setCurrentTicket(null);
         setLastCalls([]);
+        lastCalledAtRef.current = {};
       })
       .subscribe();
 
