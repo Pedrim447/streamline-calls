@@ -22,10 +22,11 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     
     // Get auth header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       console.error('No authorization header provided');
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
@@ -33,14 +34,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create client with service role for admin operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    // Create client with user's token for auth validation
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
     
-    // Verify the user's token
+    // Verify the user's token using getClaims
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: claimsData, error: authError } = await supabaseAuth.auth.getClaims(token);
     
-    if (authError || !user) {
+    if (authError || !claimsData?.claims) {
       console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
@@ -48,7 +51,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('User authenticated:', user.id);
+    const userId = claimsData.claims.sub as string;
+    console.log('User authenticated:', userId);
+    
+    // Create client with service role for admin operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CallTicketRequest = await req.json();
     const { action, unit_id, counter_id, ticket_id, skip_reason } = body;
@@ -98,8 +105,8 @@ Deno.serve(async (req) => {
           status: 'called',
           called_at: new Date().toISOString(),
           counter_id: counter_id,
-          attendant_id: user.id,
-          locked_by: user.id,
+          attendant_id: userId,
+          locked_by: userId,
           locked_at: new Date().toISOString(),
         })
         .eq('id', ticketToCall.id)
@@ -123,7 +130,7 @@ Deno.serve(async (req) => {
         action: 'ticket_called',
         entity_type: 'ticket',
         entity_id: updatedTicket.id,
-        user_id: user.id,
+        user_id: userId,
         unit_id: unit_id,
         details: { counter_id, display_code: updatedTicket.display_code },
       });
@@ -177,7 +184,7 @@ Deno.serve(async (req) => {
         action: 'ticket_repeat_call',
         entity_type: 'ticket',
         entity_id: ticket.id,
-        user_id: user.id,
+        user_id: userId,
         unit_id: ticket.unit_id,
         details: { counter_id: ticket.counter_id, display_code: ticket.display_code },
       });
@@ -231,7 +238,7 @@ Deno.serve(async (req) => {
         action: 'ticket_skipped',
         entity_type: 'ticket',
         entity_id: skippedTicket.id,
-        user_id: user.id,
+        user_id: userId,
         unit_id: skippedTicket.unit_id,
         details: { skip_reason, display_code: skippedTicket.display_code },
       });
