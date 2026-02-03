@@ -9,7 +9,7 @@ interface CreateUserRequest {
   email: string;
   password: string;
   full_name: string;
-  role: 'admin' | 'attendant' | 'recepcao';
+  role: 'admin' | 'attendant' | 'recepcao' | 'painel';
   unit_id: string;
   matricula?: string;
   cpf?: string;

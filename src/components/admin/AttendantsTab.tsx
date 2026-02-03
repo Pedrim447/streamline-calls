@@ -34,12 +34,14 @@ const roleLabels: Record<AppRole, string> = {
   admin: "Administrador",
   attendant: "Atendente",
   recepcao: "Recepção",
+  painel: "Painel TV",
 };
 
 const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = {
   admin: "default",
   attendant: "secondary",
   recepcao: "outline",
+  painel: "outline",
 };
 
 export function AttendantsTab() {

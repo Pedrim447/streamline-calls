@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Maximize, Volume2, VolumeX, Clock } from 'lucide-react';
+import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -16,6 +18,9 @@ interface TicketWithCounter extends Ticket {
 }
 
 export default function PublicPanel() {
+  const navigate = useNavigate();
+  const { user, profile, roles, isLoading: authLoading } = useAuth();
+  
   const [currentTicket, setCurrentTicket] = useState<TicketWithCounter | null>(null);
   const [lastCalls, setLastCalls] = useState<TicketWithCounter[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -30,9 +35,20 @@ export default function PublicPanel() {
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
+    options: { ticketType?: 'normal' | 'preferential' }
   ) => void>(() => {});
   const { callTicket, playAlertSound } = useVoice();
+
+  // Check if user has access to panel
+  const isPainelUser = roles.includes('painel') || roles.includes('admin');
+  const unitId = profile?.unit_id;
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
   // Keep refs in sync
   useEffect(() => {
@@ -49,7 +65,6 @@ export default function PublicPanel() {
 
   // Enable sound with user interaction
   const enableSound = useCallback(() => {
-    // Play a test sound to unlock audio context
     playAlertSound();
     setSoundEnabled(true);
     console.log('[PublicPanel] Sound enabled by user interaction');
@@ -63,17 +78,20 @@ export default function PublicPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  // Initial data load - run once on mount
+  // Initial data load - only when authenticated and has unit_id
   useEffect(() => {
+    if (!user || !isPainelUser || !unitId) return;
+
     let isMounted = true;
     
     const loadInitialData = async () => {
-      console.log('[PublicPanel] Loading initial data...');
+      console.log('[PublicPanel] Loading initial data for unit:', unitId);
       
-      // Fetch counters
+      // Fetch counters for the unit
       const { data: counterData, error: counterError } = await supabase
         .from('counters')
-        .select('*');
+        .select('*')
+        .eq('unit_id', unitId);
       
       if (counterError) {
         console.error('[PublicPanel] Error fetching counters:', counterError);
@@ -89,12 +107,15 @@ export default function PublicPanel() {
         }
       }
 
-      // Fetch recent tickets
+      // Fetch recent tickets - ONLY from today
+      const today = new Date().toISOString().split('T')[0];
       const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
         .select('*')
+        .eq('unit_id', unitId)
         .in('status', ['called', 'in_service'])
         .not('called_at', 'is', null)
+        .gte('created_at', `${today}T00:00:00`)
         .order('called_at', { ascending: false })
         .limit(6);
 
@@ -131,7 +152,7 @@ export default function PublicPanel() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user, isPainelUser, unitId]);
 
   // Handle new call - stable function using refs
   const handleNewCall = useCallback(async (updatedTicket: Ticket, isCurrentTicketUpdate: boolean = false) => {
@@ -178,33 +199,34 @@ export default function PublicPanel() {
       setCurrentTicket(ticketWithCounter);
     }
     
-    // Play voice announcement using ref with ticket type and client name
-    // Only play if sound is enabled by user interaction
+    // Play voice announcement using ref with ticket type (NO client name)
     if (counter && soundEnabledRef.current) {
       console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
       callTicketRef.current(updatedTicket.display_code, counter.number, {
         ticketType: updatedTicket.ticket_type,
-        clientName: updatedTicket.client_name,
       });
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
     
     setTimeout(() => setIsAnimating(false), 2000);
-  }, []); // No dependencies - uses refs
+  }, []);
 
-  // Subscribe to real-time updates - run once after mount
+  // Subscribe to real-time updates - only when authenticated with unit_id
   useEffect(() => {
-    console.log('[PublicPanel] Setting up realtime subscription...');
+    if (!user || !isPainelUser || !unitId) return;
+
+    console.log('[PublicPanel] Setting up realtime subscription for unit:', unitId);
     
     const channel = supabase
-      .channel('public-panel-tickets-v2')
+      .channel(`panel-tickets-${unitId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'tickets',
+          filter: `unit_id=eq.${unitId}`,
         },
         (payload) => {
           console.log('[PublicPanel] Ticket updated:', payload);
@@ -235,20 +257,10 @@ export default function PublicPanel() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tickets',
-        },
-        (payload) => {
-          console.log('[PublicPanel] Ticket inserted:', payload);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
           event: 'DELETE',
           schema: 'public',
           table: 'tickets',
+          filter: `unit_id=eq.${unitId}`,
         },
         () => {
           console.log('[PublicPanel] Ticket deleted, clearing display...');
@@ -261,9 +273,9 @@ export default function PublicPanel() {
         console.log('[PublicPanel] Realtime status:', status);
       });
 
-    // Listen for system reset broadcast
+    // Listen for system reset broadcast with unit_id
     const resetChannel = supabase
-      .channel('system-reset-public-v2')
+      .channel(`system-reset-${unitId}`)
       .on('broadcast', { event: 'system_reset' }, () => {
         console.log('[PublicPanel] System reset broadcast received');
         setCurrentTicket(null);
@@ -277,7 +289,7 @@ export default function PublicPanel() {
       supabase.removeChannel(channel);
       supabase.removeChannel(resetChannel);
     };
-  }, [handleNewCall]);
+  }, [user, isPainelUser, unitId, handleNewCall]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -295,13 +307,59 @@ export default function PublicPanel() {
     return '-';
   };
 
-  // Format client name for display (first and last name only)
-  const formatClientName = (name: string | null): string => {
-    if (!name || name.trim().length === 0) return '';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length <= 2) return name.trim();
-    return `${parts[0]} ${parts[parts.length - 1]}`;
-  };
+  // Loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="text-white/70">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Access denied
+  if (user && !isPainelUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center space-y-6 p-8">
+          <div className="w-20 h-20 mx-auto rounded-full bg-destructive/20 flex items-center justify-center">
+            <ShieldAlert className="w-10 h-10 text-destructive" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Acesso Negado</h2>
+          <p className="text-white/70 max-w-md">
+            Você não possui permissão para acessar o painel de chamadas. 
+            Entre em contato com o administrador.
+          </p>
+          <Button variant="outline" onClick={() => navigate('/auth')}>
+            Voltar ao Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // No unit assigned
+  if (user && isPainelUser && !unitId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center space-y-6 p-8">
+          <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/20 flex items-center justify-center">
+            <ShieldAlert className="w-10 h-10 text-amber-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Unidade Não Configurada</h2>
+          <p className="text-white/70 max-w-md">
+            Seu usuário não está associado a nenhuma unidade. 
+            Entre em contato com o administrador.
+          </p>
+          <Button variant="outline" onClick={() => navigate('/auth')}>
+            Voltar ao Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
@@ -399,15 +457,6 @@ export default function PublicPanel() {
                 )}
               </div>
 
-              {/* Client Name */}
-              {currentTicket.client_name && (
-                <div className="mt-4">
-                  <span className="text-3xl md:text-4xl text-white/80 font-medium">
-                    {formatClientName(currentTicket.client_name)}
-                  </span>
-                </div>
-              )}
-
               {/* Counter Number */}
               <div className="mt-8 flex items-center justify-center gap-4">
                 <span className="text-4xl md:text-6xl text-white/60">Guichê</span>
@@ -480,11 +529,9 @@ export default function PublicPanel() {
                     >
                       {ticket.display_code}
                     </span>
-                    {ticket.client_name && (
-                      <span className="text-sm text-white/60">
-                        {formatClientName(ticket.client_name)}
-                      </span>
-                    )}
+                    <span className="text-sm text-white/60">
+                      {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Normal'}
+                    </span>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white/90">
