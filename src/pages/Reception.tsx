@@ -67,35 +67,33 @@ export default function Reception() {
 
   // Fetch tickets
   useEffect(() => {
+    if (!user?.id) return;
+    
+    let isMounted = true;
+    const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+    const today = new Date().toISOString().split('T')[0];
+    
     const fetchTickets = async () => {
-      if (!user?.id) return;
-      
-      const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('tickets')
         .select('*')
         .eq('unit_id', unitId)
         .gte('created_at', `${today}T00:00:00`)
         .order('created_at', { ascending: false });
 
-      if (data) {
+      if (isMounted && data) {
         setTickets(data);
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
 
     fetchTickets();
 
-    // Subscribe to realtime updates with broadcast support
-    const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+    // Single combined channel for all realtime updates
     const channel = supabase
-      .channel(`reception-${unitId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel(`reception-combined-${unitId}`)
       .on(
         'postgres_changes',
         {
@@ -105,34 +103,21 @@ export default function Reception() {
           filter: `unit_id=eq.${unitId}`,
         },
         () => {
-          console.log('[Reception] Realtime ticket change');
-          fetchTickets();
+          if (isMounted) fetchTickets();
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, () => {
-        console.log('[Reception] Broadcast ticket_called received');
-        fetchTickets();
-      })
-      .subscribe((status) => {
-        console.log('[Reception] Subscription status:', status);
-      });
-
-    // Listen for system reset broadcast - use fixed DEFAULT_UNIT_ID to match admin broadcast
-    const resetChannel = supabase
-      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
       .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[Reception] System reset broadcast received - clearing tickets');
-        setTickets([]);
-        fetchTickets();
-        toast.info('Sistema resetado pelo administrador');
+        console.log('[Reception] System reset broadcast received');
+        if (isMounted) {
+          setTickets([]);
+          fetchTickets();
+        }
       })
-      .subscribe((status) => {
-        console.log('[Reception] Reset channel status:', status);
-      });
+      .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
-      supabase.removeChannel(resetChannel);
     };
   }, [profile?.unit_id, user?.id]);
 

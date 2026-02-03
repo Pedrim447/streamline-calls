@@ -82,16 +82,12 @@ export function useTickets(options: UseTicketsOptions = {}) {
     fetchTickets();
   }, [fetchTickets]);
 
-  // Realtime subscription with broadcast support
+  // Realtime subscription - single consolidated channel
   useEffect(() => {
     if (!realtime || !effectiveUnitId) return;
 
     const channel = supabase
-      .channel(`tickets-${effectiveUnitId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+      .channel(`tickets-unified-${effectiveUnitId}`)
       .on(
         'postgres_changes',
         {
@@ -105,9 +101,7 @@ export function useTickets(options: UseTicketsOptions = {}) {
           if (payload.eventType === 'INSERT') {
             setTickets(prev => {
               const newTicket = payload.new as Ticket;
-              // Check if already exists (optimistic update)
               if (prev.some(t => t.id === newTicket.id)) return prev;
-              // Check if matches status filter
               if (status && status.length > 0 && !status.includes(newTicket.status)) {
                 return prev;
               }
@@ -119,11 +113,9 @@ export function useTickets(options: UseTicketsOptions = {}) {
           } else if (payload.eventType === 'UPDATE') {
             setTickets(prev => {
               const updatedTicket = payload.new as Ticket;
-              // If status filter exists and ticket no longer matches, remove it
               if (status && status.length > 0 && !status.includes(updatedTicket.status)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
-              // Otherwise update it
               return prev.map(t => t.id === updatedTicket.id ? updatedTicket : t);
             });
           } else if (payload.eventType === 'DELETE') {
@@ -133,34 +125,26 @@ export function useTickets(options: UseTicketsOptions = {}) {
       )
       .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
         console.log('[Realtime] Broadcast ticket_called:', payload);
-        // Instant update from broadcast (faster than DB change propagation)
         if (payload?.ticket) {
           setTickets(prev => prev.map(t => 
             t.id === payload.ticket.id ? { ...t, ...payload.ticket } : t
           ));
         }
       })
-      .subscribe((status) => {
-        console.log('[Realtime] Subscription status:', status);
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[Realtime] System reset broadcast received');
+        setTickets([]);
+        fetchTickets();
+      })
+      .subscribe((channelStatus) => {
+        console.log('[Realtime] Subscription status:', channelStatus);
       });
 
     channelRef.current = channel;
 
-    // Listen for system reset broadcast
-    const resetChannel = supabase
-      .channel(`system-reset-tickets-${effectiveUnitId}`)
-      .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[Realtime] System reset broadcast received');
-        // Clear local tickets and refetch
-        setTickets([]);
-        fetchTickets();
-      })
-      .subscribe();
-
     return () => {
       console.log('[Realtime] Cleaning up channel');
       supabase.removeChannel(channel);
-      supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
   }, [realtime, effectiveUnitId, status, fetchTickets]);
