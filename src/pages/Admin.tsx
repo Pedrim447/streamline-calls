@@ -11,7 +11,8 @@ import {
   FileText,
   LogOut,
   Shield,
-  ArrowLeft
+  ArrowLeft,
+  Tv
 } from 'lucide-react';
 import { AttendantsTab } from '@/components/admin/AttendantsTab';
 import { CountersTab } from '@/components/admin/CountersTab';
@@ -93,6 +94,14 @@ export default function Admin() {
               <span className="text-sm text-muted-foreground">
                 {profile?.full_name}
               </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open('/painel', '_blank')}
+                title="Abrir Painel TV"
+              >
+                <Tv className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair
