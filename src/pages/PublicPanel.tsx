@@ -35,7 +35,7 @@ export default function PublicPanel() {
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
-    options: { ticketType?: 'normal' | 'preferential' }
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
   ) => void>(() => {});
   const { callTicket, playAlertSound } = useVoice();
 
@@ -199,11 +199,12 @@ export default function PublicPanel() {
       setCurrentTicket(ticketWithCounter);
     }
     
-    // Play voice announcement using ref with ticket type (NO client name)
+    // Play voice announcement using ref with ticket type and client first name (voice only, not displayed)
     if (counter && soundEnabledRef.current) {
       console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
       callTicketRef.current(updatedTicket.display_code, counter.number, {
         ticketType: updatedTicket.ticket_type,
+        clientName: updatedTicket.client_name, // Pass name for voice announcement only
       });
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
