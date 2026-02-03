@@ -107,15 +107,14 @@ export default function PublicPanel() {
         }
       }
 
-      // Fetch recent tickets - ONLY from today
+      // Fetch recent called tickets - from today, any status that has been called
       const today = new Date().toISOString().split('T')[0];
       const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
         .select('*')
         .eq('unit_id', unitId)
-        .in('status', ['called', 'in_service'])
         .not('called_at', 'is', null)
-        .gte('created_at', `${today}T00:00:00`)
+        .gte('called_at', `${today}T00:00:00`)
         .order('called_at', { ascending: false })
         .limit(6);
 
