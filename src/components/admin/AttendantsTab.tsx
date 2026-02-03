@@ -332,7 +332,8 @@ export function AttendantsTab() {
                       <SelectContent>
                         <SelectItem value="attendant">Atendente</SelectItem>
                         <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="recepcao">Recepção </SelectItem>
+                        <SelectItem value="recepcao">Recepção</SelectItem>
+                        <SelectItem value="painel">Painel TV</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
