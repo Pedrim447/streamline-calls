@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Shield, Clock, Tv } from 'lucide-react';
+import { Loader2, Shield, Clock } from 'lucide-react';
 import { z } from 'zod';
 import treLogo from '@/assets/tre-logo.png';
 
@@ -35,8 +35,16 @@ export default function Auth() {
     if (user && !authLoading) {
       setIsLoggingIn(true);
       // Redirect based on role
+      const isPainel = roles.includes('painel');
       const isRecepcao = roles.includes('recepcao');
-      const targetRoute = isRecepcao ? '/recepcao' : '/dashboard';
+      
+      let targetRoute = '/dashboard';
+      if (isPainel) {
+        targetRoute = '/painel';
+      } else if (isRecepcao) {
+        targetRoute = '/recepcao';
+      }
+      
       setTimeout(() => navigate(targetRoute), 800);
     }
   }, [user, authLoading, navigate, roles]);
@@ -217,27 +225,6 @@ export default function Auth() {
                 )}
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </Button>
-
-            {/* Divider */}
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">ou</span>
-              </div>
-            </div>
-
-            {/* Public Panel Button */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11 text-sm font-medium gap-2 hover:bg-accent/50 transition-all duration-300"
-              onClick={() => navigate('/painel')}
-            >
-              <Tv className="h-4 w-4" />
-              Abrir Painel Público (TV)
             </Button>
           </form>
         </div>
