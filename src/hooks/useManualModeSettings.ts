@@ -8,7 +8,8 @@ interface ManualModeSettings {
   manualModeMinNumber: number;
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
-  lastGeneratedNumber: number | null;
+  lastGeneratedNormal: number | null;
+  lastGeneratedPreferential: number | null;
   isLoading: boolean;
 }
 
@@ -17,7 +18,8 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
   const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
   const [callingSystemActive, setCallingSystemActive] = useState(false);
-  const [lastGeneratedNumber, setLastGeneratedNumber] = useState<number | null>(null);
+  const [lastGeneratedNormal, setLastGeneratedNormal] = useState<number | null>(null);
+  const [lastGeneratedPreferential, setLastGeneratedPreferential] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const effectiveUnitId = unitId || DEFAULT_UNIT_ID;
@@ -42,19 +44,40 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
         setCallingSystemActive(data.calling_system_active ?? false);
       }
       
-      // Fetch last generated ticket number for today
       const today = new Date().toISOString().split('T')[0];
-      const { data: lastTicket } = await supabase
+      
+      // Fetch last generated NORMAL ticket number for today
+      const { data: lastNormalTicket } = await supabase
         .from('tickets')
         .select('ticket_number')
         .eq('unit_id', effectiveUnitId)
+        .eq('ticket_type', 'normal')
         .gte('created_at', `${today}T00:00:00`)
         .order('ticket_number', { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      if (lastTicket) {
-        setLastGeneratedNumber(lastTicket.ticket_number);
+      if (lastNormalTicket) {
+        setLastGeneratedNormal(lastNormalTicket.ticket_number);
+      } else {
+        setLastGeneratedNormal(null);
+      }
+      
+      // Fetch last generated PREFERENTIAL ticket number for today
+      const { data: lastPreferentialTicket } = await supabase
+        .from('tickets')
+        .select('ticket_number')
+        .eq('unit_id', effectiveUnitId)
+        .eq('ticket_type', 'preferential')
+        .gte('created_at', `${today}T00:00:00`)
+        .order('ticket_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (lastPreferentialTicket) {
+        setLastGeneratedPreferential(lastPreferentialTicket.ticket_number);
+      } else {
+        setLastGeneratedPreferential(null);
       }
       
       setIsLoading(false);
@@ -85,7 +108,7 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       )
       .subscribe();
     
-    // Listen to new tickets to update last generated number
+    // Listen to new tickets to update last generated numbers by type
     const ticketsChannel = supabase
       .channel(`tickets-last-number-${effectiveUnitId}`)
       .on(
@@ -97,24 +120,29 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
           filter: `unit_id=eq.${effectiveUnitId}`,
         },
         (payload) => {
-          const newTicket = payload.new as { ticket_number?: number };
-          if (newTicket.ticket_number !== undefined) {
-            setLastGeneratedNumber(prev => 
-              prev === null ? newTicket.ticket_number! : Math.max(prev, newTicket.ticket_number!)
-            );
+          const newTicket = payload.new as { ticket_number?: number; ticket_type?: string };
+          if (newTicket.ticket_number !== undefined && newTicket.ticket_type) {
+            if (newTicket.ticket_type === 'normal') {
+              setLastGeneratedNormal(prev => 
+                prev === null ? newTicket.ticket_number! : Math.max(prev, newTicket.ticket_number!)
+              );
+            } else if (newTicket.ticket_type === 'preferential') {
+              setLastGeneratedPreferential(prev => 
+                prev === null ? newTicket.ticket_number! : Math.max(prev, newTicket.ticket_number!)
+              );
+            }
           }
         }
       )
       .subscribe();
 
-    // Listen for system reset broadcast to zero out lastGeneratedNumber
-    // IMPORTANT: Use fixed DEFAULT_UNIT_ID to match the admin broadcast channel
+    // Listen for system reset broadcast to zero out lastGeneratedNumbers
     const resetChannel = supabase
       .channel(`system-reset-${DEFAULT_UNIT_ID}`)
       .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumber');
-        setLastGeneratedNumber(null);
-        // Re-fetch to confirm tickets are gone (should return null)
+        console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumbers');
+        setLastGeneratedNormal(null);
+        setLastGeneratedPreferential(null);
         fetchSettings();
       })
       .subscribe();
@@ -131,7 +159,8 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
     manualModeMinNumber,
     manualModeMinNumberPreferential,
     callingSystemActive,
-    lastGeneratedNumber,
+    lastGeneratedNormal,
+    lastGeneratedPreferential,
     isLoading,
   };
 }
