@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         ? manualModeMinNumberPreferential 
         : manualModeMinNumber;
       
-      // Validate minimum
+      // Validate minimum - number must be >= configured minimum
       if (manual_ticket_number < effectiveMinNumber) {
         return new Response(
           JSON.stringify({ error: `Número mínimo permitido para ${ticket_type === 'preferential' ? 'preferencial' : 'normal'} é ${effectiveMinNumber}` }),
@@ -77,35 +77,19 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Check if number already exists today
+      // Check if number already exists today (same type)
       const { data: existingTicket } = await supabaseAdmin
         .from('tickets')
         .select('id')
         .eq('unit_id', unit_id)
         .eq('ticket_number', manual_ticket_number)
+        .eq('ticket_type', ticket_type)
         .gte('created_at', `${today}T00:00:00`)
         .maybeSingle();
       
       if (existingTicket) {
         return new Response(
-          JSON.stringify({ error: `Senha ${manual_ticket_number} já foi gerada hoje` }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Check if number is greater than last generated
-      const { data: lastTicket } = await supabaseAdmin
-        .from('tickets')
-        .select('ticket_number')
-        .eq('unit_id', unit_id)
-        .gte('created_at', `${today}T00:00:00`)
-        .order('ticket_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (lastTicket && manual_ticket_number <= lastTicket.ticket_number) {
-        return new Response(
-          JSON.stringify({ error: `Número deve ser maior que ${lastTicket.ticket_number} (última senha gerada)` }),
+          JSON.stringify({ error: `Senha ${ticket_type === 'preferential' ? 'P' : 'N'}-${manual_ticket_number} já foi gerada hoje` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
