@@ -1,118 +1,213 @@
 
-# Plano: Corrigir Reset e Validação de Senhas no Modo Manual
+# Plano: Painel de Chamadas Protegido com Correções
 
-## Problema Identificado
+## Resumo das Alterações Solicitadas
 
-Após análise detalhada, identifiquei **3 problemas críticos**:
+O objetivo é transformar o painel público em uma tela protegida por login, corrigir os problemas de atualização em tempo real, remover a exibição de nomes de clientes, e corrigir o histórico de senhas.
 
-1. **Reset não deleta tickets**: O código atual usa o cliente Supabase normal que está sujeito a RLS. Mesmo com a policy de DELETE criada, pode haver problemas de autenticação ou timing.
+---
 
-2. **Validação no frontend está errada**: A Reception.tsx valida `ticketNum <= lastGeneratedNumber`, mas o `lastGeneratedNumber` vem do banco de dados (onde os tickets ainda existem porque o reset falhou).
+## 1. Criar Nova Função de Usuário "painel"
 
-3. **Edge function também valida contra banco**: A função `create-ticket` busca a última senha no banco e bloqueia se o número não for maior.
+### Banco de Dados
+Adicionar nova role ao enum `app_role`:
 
-## Solução
-
-### Parte 1: Criar Edge Function para Reset (Bypass RLS)
-
-Criar uma nova edge function `reset-system` que usa a **service role key** para deletar tickets e contadores, ignorando completamente o RLS.
-
-```text
-supabase/functions/reset-system/index.ts
+```sql
+ALTER TYPE public.app_role ADD VALUE 'painel';
 ```
 
-A função vai:
-- Receber a confirmação de senha do admin
-- Verificar a autenticação
-- Deletar TODOS os tickets do dia usando service role
-- Deletar contadores do dia
-- Retornar sucesso
+### Criar Usuário Painel
+Será necessário criar um usuário específico para o painel através do painel administrativo ou via Edge Function `admin-create-user` com a role `painel`.
 
-### Parte 2: Modificar ManualModeSettingsCard para Usar a Edge Function
+---
 
-Alterar o código de reset para chamar a edge function ao invés de tentar deletar diretamente:
+## 2. Proteger o Painel com Autenticação
 
-```text
-src/components/admin/ManualModeSettingsCard.tsx
-```
+### Modificar `src/pages/PublicPanel.tsx`
 
-Trocar:
+**Adicionar verificação de autenticação:**
+- Importar `useAuth` do contexto
+- Verificar se o usuário está logado e possui a role `painel` ou `admin`
+- Redirecionar para `/auth` se não autenticado
+- Remover overlay de "Ativar Som" (som será ativado automaticamente após login)
+
+**Código conceitual:**
 ```typescript
-// Antes: delete direto (falha por RLS)
-await supabase.from('tickets').delete()...
+const { user, roles, isLoading } = useAuth();
 
-// Depois: chamar edge function
-await supabase.functions.invoke('reset-system', { body: { unit_id } })
-```
+useEffect(() => {
+  if (!isLoading && !user) {
+    navigate('/auth');
+  }
+}, [user, isLoading]);
 
-### Parte 3: Corrigir Validação na Reception.tsx
-
-Simplificar a validação para aceitar qualquer número >= mínimo configurado. A validação de duplicatas é feita no backend:
-
-```text
-src/pages/Reception.tsx
-```
-
-Remover a validação contra `lastGeneratedNumber` no frontend:
-```typescript
-// REMOVER estas linhas:
-if (lastGeneratedNumber !== null && ticketNum <= lastGeneratedNumber) {
-  toast.error(`O número da senha deve ser maior que ${lastGeneratedNumber}`);
-  return;
+// Verificar se tem permissão
+const isPainelUser = roles.includes('painel') || roles.includes('admin');
+if (!isPainelUser) {
+  return <div>Acesso negado</div>;
 }
 ```
 
-A edge function `create-ticket` já valida duplicatas corretamente.
+---
 
-### Parte 4: Ajustar Edge Function create-ticket
+## 3. Corrigir Atualização em Tempo Real
 
-Modificar a validação para ser menos restritiva após um reset:
+### Problema Identificado
+O painel não está atualizando em tempo real porque:
+1. A RLS policy `Public can view called tickets` requer que o ticket tenha status `called` ou `in_service`
+2. O realtime não está filtrando por unit_id
+3. O painel precisa de um usuário autenticado para receber eventos via RLS
 
-```text
-supabase/functions/create-ticket/index.ts
+### Solução
+
+**Atualizar a subscrição realtime para:**
+- Usar o `unit_id` do perfil do usuário logado
+- Adicionar filtro por `unit_id` no canal de realtime
+- Usar `useRealtimeChannel` ou implementação similar
+
+**Modificar o código de subscrição:**
+```typescript
+const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+
+const channel = supabase
+  .channel(`panel-tickets-${unitId}`)
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'tickets',
+      filter: `unit_id=eq.${unitId}`,
+    },
+    (payload) => {
+      // Lógica de atualização
+    }
+  )
+  .subscribe();
 ```
 
-Remover a validação "deve ser maior que última gerada". Manter apenas:
-1. Número >= mínimo configurado
-2. Número não duplicado (já existe)
+---
 
-## Arquivos a Criar/Modificar
+## 4. Remover Nome do Cliente da Exibição
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/functions/reset-system/index.ts` | CRIAR | Nova edge function para reset com service role |
-| `src/components/admin/ManualModeSettingsCard.tsx` | MODIFICAR | Usar edge function para reset |
-| `src/pages/Reception.tsx` | MODIFICAR | Remover validação contra lastGeneratedNumber |
-| `supabase/functions/create-ticket/index.ts` | MODIFICAR | Remover validação "maior que última" |
+### Modificar `src/pages/PublicPanel.tsx`
 
-## Fluxo Corrigido Após Implementação
+**Remover exibição do nome em:**
 
-```text
-Admin clica Reset → confirma senha
-         |
-         v
-Chama edge function reset-system (service role)
-         |
-         v
-Edge function deleta TODOS tickets e contadores (bypass RLS)
-         |
-         v
-Retorna sucesso + broadcast reset
-         |
-         +---> Reception: limpa estado local
-         |
-         +---> useManualModeSettings: zera lastGeneratedNumber
-         |
-         v
-Recepção pode gerar senha 176 (>= mínimo configurado)
-         |
-         v
-Edge function aceita: 176 >= 176 e não existe no banco
+1. **Ticket atual (linhas 402-409):** Remover completamente o bloco que mostra `formatClientName`
+2. **Histórico (linhas 483-487):** Remover a linha que mostra o nome do cliente
+3. **Chamada por voz:** Remover `clientName` das opções de `callTicket`
+
+**Antes:**
+```typescript
+callTicketRef.current(updatedTicket.display_code, counter.number, {
+  ticketType: updatedTicket.ticket_type,
+  clientName: updatedTicket.client_name,
+});
 ```
 
-## Resultado Esperado
+**Depois:**
+```typescript
+callTicketRef.current(updatedTicket.display_code, counter.number, {
+  ticketType: updatedTicket.ticket_type,
+});
+```
 
-1. Reset apaga TODOS os tickets do dia instantaneamente
-2. Estatísticas zeram imediatamente
-3. Próxima senha começa do número mínimo configurado (176)
-4. Não há mais bloqueio por "última senha gerada"
+---
+
+## 5. Corrigir Histórico de Senhas
+
+### Problema Identificado
+- O histórico mostra senhas muito antigas (de dias anteriores)
+- Após reset, as senhas antigas não são limpas da tela
+
+### Solução
+
+**Modificar consulta inicial para filtrar por data de hoje:**
+```typescript
+const today = new Date().toISOString().split('T')[0];
+
+const { data: ticketData } = await supabase
+  .from('tickets')
+  .select('*')
+  .eq('unit_id', unitId)
+  .in('status', ['called', 'in_service'])
+  .not('called_at', 'is', null)
+  .gte('created_at', `${today}T00:00:00`)
+  .order('called_at', { ascending: false })
+  .limit(6);
+```
+
+**Garantir que o reset limpe o estado:**
+- O broadcast `system_reset` já está configurado para limpar `currentTicket`, `lastCalls` e `lastCalledAtRef`
+- Verificar se o canal de reset está correto (usar mesmo unit_id)
+
+---
+
+## 6. Atualizar Auth.tsx para Redirecionar Usuário "painel"
+
+### Modificar `src/pages/Auth.tsx`
+
+Adicionar redirecionamento específico para a role `painel`:
+
+```typescript
+useEffect(() => {
+  if (user && !authLoading) {
+    setIsLoggingIn(true);
+    
+    const isPainel = roles.includes('painel');
+    const isRecepcao = roles.includes('recepcao');
+    
+    let targetRoute = '/dashboard';
+    if (isPainel) {
+      targetRoute = '/painel';
+    } else if (isRecepcao) {
+      targetRoute = '/recepcao';
+    }
+    
+    setTimeout(() => navigate(targetRoute), 800);
+  }
+}, [user, authLoading, navigate, roles]);
+```
+
+**Remover o botão "Abrir Painel Público (TV)"** da tela de login, pois agora requer autenticação.
+
+---
+
+## 7. Atualizar Rota do Painel
+
+### Modificar `src/App.tsx`
+
+O painel já está na rota `/painel`, apenas garantir que a proteção de rota funcione.
+
+---
+
+## Arquivos a Serem Modificados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/PublicPanel.tsx` | Adicionar auth, corrigir realtime, remover nome, corrigir histórico |
+| `src/pages/Auth.tsx` | Adicionar redirecionamento para role 'painel', remover botão público |
+| Migração SQL | Adicionar nova role 'painel' ao enum |
+
+---
+
+## Detalhes Técnicos
+
+### RLS Considerations
+Com o usuário autenticado como `painel`:
+- O realtime funcionará corretamente com o filtro de `unit_id`
+- A política `Public can view called tickets` continuará funcionando
+- O usuário `painel` precisa ter um `unit_id` associado no perfil
+
+### Fluxo de Autenticação
+1. Usuário acessa `/painel`
+2. Se não autenticado, redireciona para `/auth`
+3. Após login com role `painel`, redireciona para `/painel`
+4. Som é ativado automaticamente (já existe um overlay, mas pode ser removido após auth)
+
+### Criação do Usuário Painel
+O administrador deverá criar o usuário do painel via:
+- Painel Admin > Atendentes > Adicionar Usuário
+- Selecionar role "painel"
+- Atribuir à unidade correta
