@@ -478,7 +478,7 @@ export default function PublicPanel() {
                   }`}
                   variant="outline"
                 >
-                  {currentTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'NORMAL'}
+                  {currentTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'ATENDIMENTO'}
                 </Badge>
               </div>
 
@@ -530,7 +530,7 @@ export default function PublicPanel() {
                       {ticket.display_code}
                     </span>
                     <span className="text-sm text-white/60">
-                      {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Normal'}
+                      {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Atendimento'}
                     </span>
                   </div>
                   <div className="text-right">

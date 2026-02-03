@@ -131,9 +131,9 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     // Determine ticket type from parameter or prefix
     let ticketTypeSpoken: string;
     if (ticketType) {
-      ticketTypeSpoken = ticketType === 'preferential' ? 'preferencial' : 'normal';
+      ticketTypeSpoken = ticketType === 'preferential' ? 'atendimento preferencial' : 'atendimento';
     } else {
-      ticketTypeSpoken = ticketPrefix === 'P' ? 'preferencial' : 'normal';
+      ticketTypeSpoken = ticketPrefix === 'P' ? 'atendimento preferencial' : 'atendimento';
     }
     
     const ticketNumberSpoken = numberToWords(ticketNumber);
@@ -148,8 +148,8 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
       message = `Atenção ${firstName}. `;
     }
     
-    // Add ticket info with type
-    message += `Senha ${ticketTypeSpoken} ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
+    // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
+    message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
 
     console.log('Speaking:', message);
 
