@@ -237,26 +237,18 @@ export default function PublicPanel() {
           if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
             const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
             
-            // Detect new call: status changed TO called (from any other status)
-            // Note: oldTicket.status may be undefined in some realtime payloads
-            const statusChangedToCalled = updatedTicket.status === 'called' && 
-              (oldTicket.status !== 'called' && oldTicket.status !== 'in_service');
+            // Detect new call: status changed from waiting to called/in_service
+            const isNewCall = oldTicket.status === 'waiting';
             
-            // Detect repeat call: called_at timestamp changed while status is already called/in_service
-            const calledAtChanged = previousCalledAt !== updatedTicket.called_at;
-            const isRepeatCall = !statusChangedToCalled && calledAtChanged && previousCalledAt !== undefined;
-            
-            // First time seeing this ticket (new call)
-            const isFirstTimeSeen = previousCalledAt === undefined && updatedTicket.status === 'called';
+            // Detect repeat call: called_at timestamp changed
+            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at && !isNewCall;
             
             // Update ref with new called_at
             lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
             
             // Trigger voice for new calls or repeat calls
-            const shouldTriggerVoice = statusChangedToCalled || isRepeatCall || isFirstTimeSeen;
-            
-            if (shouldTriggerVoice) {
-              console.log('[PublicPanel] Triggering call - statusChanged:', statusChangedToCalled, 'isRepeat:', isRepeatCall, 'isFirstTime:', isFirstTimeSeen);
+            if (isNewCall || isRepeatCall) {
+              console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
               handleNewCall(updatedTicket, isRepeatCall);
             }
           }
