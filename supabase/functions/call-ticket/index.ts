@@ -125,16 +125,6 @@ Deno.serve(async (req) => {
 
       console.log('Ticket called successfully:', updatedTicket.display_code);
 
-      // Log the action
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'ticket_called',
-        entity_type: 'ticket',
-        entity_id: updatedTicket.id,
-        user_id: userId,
-        unit_id: unit_id,
-        details: { counter_id, display_code: updatedTicket.display_code },
-      });
-
       return new Response(
         JSON.stringify({ success: true, ticket: updatedTicket }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -179,16 +169,6 @@ Deno.serve(async (req) => {
         console.error('Error updating ticket for repeat:', updateError);
       }
 
-      // Log the repeat action
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'ticket_repeat_call',
-        entity_type: 'ticket',
-        entity_id: ticket.id,
-        user_id: userId,
-        unit_id: ticket.unit_id,
-        details: { counter_id: ticket.counter_id, display_code: ticket.display_code },
-      });
-
       return new Response(
         JSON.stringify({ success: true, ticket: updatedTicket || ticket, is_repeat: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -232,16 +212,6 @@ Deno.serve(async (req) => {
       }
 
       console.log('Ticket skipped:', skippedTicket.display_code);
-
-      // Log the action
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'ticket_skipped',
-        entity_type: 'ticket',
-        entity_id: skippedTicket.id,
-        user_id: userId,
-        unit_id: skippedTicket.unit_id,
-        details: { skip_reason, display_code: skippedTicket.display_code },
-      });
 
       return new Response(
         JSON.stringify({ success: true, ticket: skippedTicket }),
