@@ -11,6 +11,7 @@ type TicketType = Database['public']['Enums']['ticket_type'];
 interface UseTicketsOptions {
   unitId?: string | null;
   status?: TicketStatus[];
+  organIds?: string[];
   limit?: number;
   realtime?: boolean;
 }
