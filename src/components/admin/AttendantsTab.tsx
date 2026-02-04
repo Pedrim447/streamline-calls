@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Shield, User, Users } from "lucide-react";
+import { UserPlus, Shield, User, Users, Building2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -26,6 +28,14 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface ProfileWithRoles extends Profile {
   roles: AppRole[];
+  organ_ids: string[];
+}
+
+interface Organ {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
 }
 
 const DEFAULT_UNIT_ID = "a0000000-0000-0000-0000-000000000001";
@@ -46,9 +56,14 @@ const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = 
 
 export function AttendantsTab() {
   const { toast } = useToast();
+  const { profile: authProfile } = useAuth();
   const [profiles, setProfiles] = useState<ProfileWithRoles[]>([]);
+  const [organs, setOrgans] = useState<Organ[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOrgansDialogOpen, setIsOrgansDialogOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<ProfileWithRoles | null>(null);
+  const [selectedOrgans, setSelectedOrgans] = useState<string[]>([]);
 
   // Form state
   const [formEmail, setFormEmail] = useState("");
@@ -59,6 +74,8 @@ export function AttendantsTab() {
   const [formCpf, setFormCpf] = useState("");
   const [formBirthDate, setFormBirthDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
 
   const fetchProfiles = async () => {
     setIsLoading(true);
