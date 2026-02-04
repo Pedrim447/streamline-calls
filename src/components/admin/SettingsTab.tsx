@@ -111,7 +111,7 @@ export function SettingsTab() {
           manual_mode_enabled: manualModeEnabled,
           manual_mode_min_number: manualModeMinNumber,
           manual_mode_min_number_preferential: manualModeMinNumberPreferential,
-        })
+          atendimento_acao_enabled: atendimentoAcaoEnabled,
         .eq('unit_id', DEFAULT_UNIT_ID);
 
       if (settingsError) throw settingsError;
