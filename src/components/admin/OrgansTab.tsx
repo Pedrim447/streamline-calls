@@ -311,6 +311,12 @@ export function OrgansTab() {
                     <Badge variant="outline">{organ.code}</Badge>
                   </TableCell>
                   <TableCell>{organ.name}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="text-xs space-y-1">
+                      <div>N: {organ.min_number_normal ?? 1}</div>
+                      <div>P: {organ.min_number_preferential ?? 1}</div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Switch
                       checked={organ.is_active}
