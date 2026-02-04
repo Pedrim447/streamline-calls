@@ -63,6 +63,7 @@ export interface CallTicketOptions {
   withSound?: boolean;
   ticketType?: 'normal' | 'preferential';
   clientName?: string | null;
+  organName?: string | null;
 }
 
 export function useVoice(settings: Partial<VoiceSettings> = {}) {
@@ -100,9 +101,9 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const speak = useCallback((
     ticketCode: string, 
     counterNumber: number | string, 
-    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
   ) => {
-    const { isSoft = false, ticketType, clientName } = options;
+    const { isSoft = false, ticketType, clientName, organName } = options;
     
     if (!voiceSettings.enabled) {
       console.log('Voice disabled in settings');
@@ -142,14 +143,20 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     // Build the complete message
     let message = '';
     
-    // Add client name greeting if available
-    if (clientName && clientName.trim().length > 0) {
-      const firstName = clientName.trim().split(' ')[0];
-      message = `Atenção ${firstName}. `;
+    // If organName is provided (Atendimento Ação mode), use organ-focused message
+    // Otherwise, use client name greeting if available
+    if (organName && organName.trim().length > 0) {
+      // Atendimento Ação mode: announce organ instead of client name
+      message = `${ticketTypeSpoken} número ${ticketNumberSpoken}, ${organName}, dirija-se ao guichê ${counterSpoken}.`;
+    } else {
+      // Normal mode: use client name greeting if available
+      if (clientName && clientName.trim().length > 0) {
+        const firstName = clientName.trim().split(' ')[0];
+        message = `Atenção ${firstName}. `;
+      }
+      // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
+      message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
     }
-    
-    // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
-    message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
 
     console.log('Speaking:', message);
 
@@ -259,16 +266,16 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     counterNumber: number | string, 
     options: CallTicketOptions = {}
   ) => {
-    const { withSound = true, ticketType, clientName } = options;
+    const { withSound = true, ticketType, clientName, organName } = options;
     
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
+        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
       }, 600);
     } else {
-      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
+      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
     }
   }, [speak, playAlertSound]);
 
@@ -276,14 +283,14 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const repeatCallSoft = useCallback((
     ticketCode: string, 
     counterNumber: number | string,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
   ) => {
-    const { ticketType, clientName } = options;
+    const { ticketType, clientName, organName } = options;
     
     playSoftChime();
     // Small delay before soft voice
     setTimeout(() => {
-      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName });
+      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName, organName });
     }, 500);
   }, [speak, playSoftChime]);
 

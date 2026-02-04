@@ -5,16 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2 } from 'lucide-react';
+import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'];
 type Counter = Database['public']['Tables']['counters']['Row'];
+type Organ = Database['public']['Tables']['organs']['Row'];
 
 interface TicketWithCounter extends Ticket {
   counter?: Counter;
+  organ?: Organ;
 }
 
 export default function PublicPanel() {
@@ -26,16 +28,20 @@ export default function PublicPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
+  const [organs, setOrgans] = useState<Record<string, Organ>>({});
+  const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const countersRef = useRef<Record<string, Counter>>({});
+  const organsRef = useRef<Record<string, Organ>>({});
+  const atendimentoAcaoEnabledRef = useRef(false);
   const soundEnabledRef = useRef(false);
   const lastCalledAtRef = useRef<Record<string, string>>({});
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null }
   ) => void>(() => {});
   const { callTicket, playAlertSound } = useVoice();
 
@@ -54,6 +60,14 @@ export default function PublicPanel() {
   useEffect(() => {
     countersRef.current = counters;
   }, [counters]);
+
+  useEffect(() => {
+    organsRef.current = organs;
+  }, [organs]);
+
+  useEffect(() => {
+    atendimentoAcaoEnabledRef.current = atendimentoAcaoEnabled;
+  }, [atendimentoAcaoEnabled]);
 
   useEffect(() => {
     callTicketRef.current = callTicket;
@@ -87,6 +101,19 @@ export default function PublicPanel() {
     const loadInitialData = async () => {
       console.log('[PublicPanel] Loading initial data for unit:', unitId);
       
+      // Fetch settings to check if Atendimento Ação is enabled
+      const { data: settingsData } = await supabase
+        .from('settings')
+        .select('atendimento_acao_enabled, manual_mode_enabled')
+        .eq('unit_id', unitId)
+        .maybeSingle();
+      
+      const isAtendimentoAcaoActive = settingsData?.manual_mode_enabled && settingsData?.atendimento_acao_enabled;
+      if (isMounted) {
+        setAtendimentoAcaoEnabled(isAtendimentoAcaoActive ?? false);
+        atendimentoAcaoEnabledRef.current = isAtendimentoAcaoActive ?? false;
+      }
+      
       // Fetch counters for the unit
       const { data: counterData, error: counterError } = await supabase
         .from('counters')
@@ -104,6 +131,27 @@ export default function PublicPanel() {
         if (isMounted) {
           setCounters(counterMap);
           countersRef.current = counterMap;
+        }
+      }
+
+      // Fetch organs for the unit
+      const { data: organData, error: organError } = await supabase
+        .from('organs')
+        .select('*')
+        .eq('unit_id', unitId)
+        .eq('is_active', true);
+      
+      if (organError) {
+        console.error('[PublicPanel] Error fetching organs:', organError);
+      }
+      
+      let organMap: Record<string, Organ> = {};
+      if (organData) {
+        console.log('[PublicPanel] Organs loaded:', organData.length);
+        organData.forEach(o => { organMap[o.id] = o; });
+        if (isMounted) {
+          setOrgans(organMap);
+          organsRef.current = organMap;
         }
       }
 
@@ -128,6 +176,7 @@ export default function PublicPanel() {
         const ticketsWithCounters = ticketData.map(ticket => ({
           ...ticket,
           counter: ticket.counter_id ? counterMap[ticket.counter_id] : undefined,
+          organ: ticket.organ_id ? organMap[ticket.organ_id] : undefined,
         }));
         
         setCurrentTicket(ticketsWithCounters[0]);
@@ -174,10 +223,29 @@ export default function PublicPanel() {
         setCounters(prev => ({ ...prev, [data.id]: data }));
       }
     }
+
+    // Fetch organ info using ref
+    let organ = updatedTicket.organ_id ? organsRef.current[updatedTicket.organ_id] : undefined;
+    
+    if (!organ && updatedTicket.organ_id) {
+      console.log('[PublicPanel] Organ not in cache, fetching...');
+      const { data } = await supabase
+        .from('organs')
+        .select('*')
+        .eq('id', updatedTicket.organ_id)
+        .single();
+      
+      if (data) {
+        organ = data;
+        organsRef.current[data.id] = data;
+        setOrgans(prev => ({ ...prev, [data.id]: data }));
+      }
+    }
     
     const ticketWithCounter: TicketWithCounter = {
       ...updatedTicket,
       counter,
+      organ,
     };
     
     setIsAnimating(true);
@@ -198,13 +266,26 @@ export default function PublicPanel() {
       setCurrentTicket(ticketWithCounter);
     }
     
-    // Play voice announcement using ref with ticket type and client first name (voice only, not displayed)
+    // Play voice announcement using ref
+    // In Atendimento Ação mode: announce organ instead of client name
     if (counter && soundEnabledRef.current) {
-      console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
-      callTicketRef.current(updatedTicket.display_code, counter.number, {
+      console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type, 'atendimentoAcao:', atendimentoAcaoEnabledRef.current);
+      
+      const voiceOptions: { ticketType: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {
         ticketType: updatedTicket.ticket_type,
-        clientName: updatedTicket.client_name, // Pass name for voice announcement only
-      });
+        clientName: undefined,
+        organName: undefined,
+      };
+      
+      if (atendimentoAcaoEnabledRef.current && organ) {
+        // Atendimento Ação mode: use organ name instead of client name
+        voiceOptions.organName = organ.name;
+      } else {
+        // Normal mode: use client name
+        voiceOptions.clientName = updatedTicket.client_name;
+      }
+      
+      callTicketRef.current(updatedTicket.display_code, counter.number, voiceOptions);
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
@@ -457,8 +538,8 @@ export default function PublicPanel() {
                 </span>
               </div>
 
-              {/* Type Badge */}
-              <div className="mt-6">
+              {/* Type Badge and Organ */}
+              <div className="mt-6 flex flex-col items-center gap-3">
                 <Badge 
                   className={`text-2xl px-6 py-2 ${
                     currentTicket.ticket_type === 'preferential'
@@ -469,6 +550,16 @@ export default function PublicPanel() {
                 >
                   {currentTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'ATENDIMENTO'}
                 </Badge>
+                
+                {/* Show organ when Atendimento Ação is enabled */}
+                {atendimentoAcaoEnabled && currentTicket.organ && (
+                  <div className="flex items-center gap-2 text-2xl text-white/80">
+                    <Building2 className="h-6 w-6" />
+                    <span className="font-semibold">{currentTicket.organ.code}</span>
+                    <span className="text-white/60">-</span>
+                    <span>{currentTicket.organ.name}</span>
+                  </div>
+                )}
               </div>
 
               {/* Speaking indicator */}
@@ -521,6 +612,13 @@ export default function PublicPanel() {
                     <span className="text-sm text-white/60">
                       {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Atendimento'}
                     </span>
+                    {/* Show organ in history when Atendimento Ação is enabled */}
+                    {atendimentoAcaoEnabled && ticket.organ && (
+                      <span className="text-xs text-white/50 flex items-center gap-1 mt-1">
+                        <Building2 className="h-3 w-3" />
+                        {ticket.organ.code}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white/90">
