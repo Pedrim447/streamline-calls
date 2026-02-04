@@ -38,10 +38,12 @@ export function ManualModeSettingsCard({
   manualModeMinNumber,
   manualModeMinNumberPreferential,
   callingSystemActive,
+  atendimentoAcaoEnabled,
   onManualModeEnabledChange,
   onManualModeMinNumberChange,
   onManualModeMinNumberPreferentialChange,
   onCallingSystemActiveChange,
+  onAtendimentoAcaoEnabledChange,
   onSettingsChange,
 }: ManualModeSettingsCardProps) {
   const { toast } = useToast();
