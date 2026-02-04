@@ -125,16 +125,6 @@ Deno.serve(async (req) => {
 
       console.log('Ticket called successfully:', updatedTicket.display_code);
 
-      // Log the action
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'ticket_called',
-        entity_type: 'ticket',
-        entity_id: updatedTicket.id,
-        user_id: userId,
-        unit_id: unit_id,
-        details: { counter_id, display_code: updatedTicket.display_code },
-      });
-
       return new Response(
         JSON.stringify({ success: true, ticket: updatedTicket }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
