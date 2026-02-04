@@ -92,7 +92,12 @@ export function OrgansTab() {
       if (editingOrgan) {
         const { error } = await supabase
           .from('organs')
-          .update({ name: formData.name, code: formData.code.toUpperCase() })
+          .update({ 
+            name: formData.name, 
+            code: formData.code.toUpperCase(),
+            min_number_normal: formData.min_number_normal,
+            min_number_preferential: formData.min_number_preferential,
+          })
           .eq('id', editingOrgan.id);
 
         if (error) throw error;
@@ -105,6 +110,8 @@ export function OrgansTab() {
             code: formData.code.toUpperCase(),
             unit_id: unitId,
             is_active: true,
+            min_number_normal: formData.min_number_normal,
+            min_number_preferential: formData.min_number_preferential,
           });
 
         if (error) throw error;
@@ -113,7 +120,7 @@ export function OrgansTab() {
 
       setIsDialogOpen(false);
       setEditingOrgan(null);
-      setFormData({ name: '', code: '' });
+      setFormData({ name: '', code: '', min_number_normal: 1, min_number_preferential: 1 });
       fetchOrgans();
     } catch (error: any) {
       toast({
