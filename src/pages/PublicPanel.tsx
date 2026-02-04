@@ -538,8 +538,8 @@ export default function PublicPanel() {
                 </span>
               </div>
 
-              {/* Type Badge */}
-              <div className="mt-6">
+              {/* Type Badge and Organ */}
+              <div className="mt-6 flex flex-col items-center gap-3">
                 <Badge 
                   className={`text-2xl px-6 py-2 ${
                     currentTicket.ticket_type === 'preferential'
@@ -550,6 +550,16 @@ export default function PublicPanel() {
                 >
                   {currentTicket.ticket_type === 'preferential' ? 'PREFERENCIAL' : 'ATENDIMENTO'}
                 </Badge>
+                
+                {/* Show organ when Atendimento Ação is enabled */}
+                {atendimentoAcaoEnabled && currentTicket.organ && (
+                  <div className="flex items-center gap-2 text-2xl text-white/80">
+                    <Building2 className="h-6 w-6" />
+                    <span className="font-semibold">{currentTicket.organ.code}</span>
+                    <span className="text-white/60">-</span>
+                    <span>{currentTicket.organ.name}</span>
+                  </div>
+                )}
               </div>
 
               {/* Speaking indicator */}
