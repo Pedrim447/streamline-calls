@@ -63,6 +63,7 @@ export interface CallTicketOptions {
   withSound?: boolean;
   ticketType?: 'normal' | 'preferential';
   clientName?: string | null;
+  organName?: string | null;
 }
 
 export function useVoice(settings: Partial<VoiceSettings> = {}) {
