@@ -101,9 +101,9 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const speak = useCallback((
     ticketCode: string, 
     counterNumber: number | string, 
-    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
   ) => {
-    const { isSoft = false, ticketType, clientName } = options;
+    const { isSoft = false, ticketType, clientName, organName } = options;
     
     if (!voiceSettings.enabled) {
       console.log('Voice disabled in settings');
