@@ -299,6 +299,7 @@ export function OrgansTab() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead className="text-center">Senha Inicial</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
