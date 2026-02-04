@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const body: CreateUserRequest = await req.json();
-    const { email, password, full_name, role, unit_id, matricula, cpf, birth_date, avatar_url } = body;
+    const { email, password, full_name, role, unit_id, matricula, avatar_url } = body;
 
     console.log('Creating user:', email, 'with role:', role);
 
