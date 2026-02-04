@@ -240,8 +240,26 @@ export function ManualModeSettingsCard({
 
           <Separator />
 
-          {/* Number Settings - Always visible */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Atendimento Ação Toggle - only visible when manual mode is enabled */}
+          {manualModeEnabled && (
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div>
+                <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
+                <p className="text-sm text-muted-foreground">
+                  {atendimentoAcaoEnabled 
+                    ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
+                    : 'Desativado - senhas não são vinculadas a órgãos específicos'}
+                </p>
+              </div>
+              <Switch
+                id="atendimentoAcaoEnabled"
+                checked={atendimentoAcaoEnabled}
+                onCheckedChange={onAtendimentoAcaoEnabledChange}
+              />
+            </div>
+          )}
+
+          <Separator />
             <div className="space-y-2">
               <Label htmlFor="manualModeMinNumber">
                 Número Inicial - Normal
