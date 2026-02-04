@@ -150,18 +150,21 @@ export default function Reception() {
       return;
     }
 
-    const trimmedName = clientName.trim();
-    
-    // Validate name - must have at least 2 words (first and last name)
-    const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
-    if (nameParts.length < 2) {
-      toast.error('Por favor, informe o nome completo do cliente (nome e sobrenome)');
-      return;
-    }
-    
-    if (trimmedName.length < 5) {
-      toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
-      return;
+    // Only validate client name when NOT in Atendimento Ação mode
+    if (!atendimentoAcaoEnabled) {
+      const trimmedName = clientName.trim();
+      
+      // Validate name - must have at least 2 words (first and last name)
+      const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
+      if (nameParts.length < 2) {
+        toast.error('Por favor, informe o nome completo do cliente (nome e sobrenome)');
+        return;
+      }
+      
+      if (trimmedName.length < 5) {
+        toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
+        return;
+      }
     }
 
     // Validate manual ticket number if manual mode is enabled
