@@ -467,16 +467,19 @@ export default function Reception() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
-              <Input
-                id="clientName"
-                placeholder="Digite o nome completo"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                disabled={!callingSystemActive}
-              />
-            </div>
+            {/* Client Name - only show when NOT in Atendimento Ação mode */}
+            {!atendimentoAcaoEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
+                <Input
+                  id="clientName"
+                  placeholder="Digite o nome completo"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  disabled={!callingSystemActive}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="ticketType">Tipo de Atendimento</Label>
