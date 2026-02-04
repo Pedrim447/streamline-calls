@@ -299,8 +299,6 @@ export function AttendantsTab() {
     setFormPassword("");
     setFormRole("attendant");
     setFormMatricula("");
-    setFormCpf("");
-    setFormBirthDate("");
   };
 
   const getRoleIcon = (role: AppRole) => {
