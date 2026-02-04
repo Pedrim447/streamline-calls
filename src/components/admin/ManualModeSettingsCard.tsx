@@ -25,11 +25,13 @@ interface ManualModeSettingsCardProps {
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
   atendimentoAcaoEnabled: boolean;
+  perOrganNumbersEnabled: boolean;
   onManualModeEnabledChange: (value: boolean) => void;
   onManualModeMinNumberChange: (value: number) => void;
   onManualModeMinNumberPreferentialChange: (value: number) => void;
   onCallingSystemActiveChange: (value: boolean) => void;
   onAtendimentoAcaoEnabledChange: (value: boolean) => void;
+  onPerOrganNumbersEnabledChange: (value: boolean) => void;
   onSettingsChange: () => void;
 }
 
@@ -39,11 +41,13 @@ export function ManualModeSettingsCard({
   manualModeMinNumberPreferential,
   callingSystemActive,
   atendimentoAcaoEnabled,
+  perOrganNumbersEnabled,
   onManualModeEnabledChange,
   onManualModeMinNumberChange,
   onManualModeMinNumberPreferentialChange,
   onCallingSystemActiveChange,
   onAtendimentoAcaoEnabledChange,
+  onPerOrganNumbersEnabledChange,
   onSettingsChange,
 }: ManualModeSettingsCardProps) {
   const { toast } = useToast();
@@ -242,27 +246,48 @@ export function ManualModeSettingsCard({
 
           {/* Atendimento Ação Toggle - only visible when manual mode is enabled */}
           {manualModeEnabled && (
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-              <div>
-                <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
-                <p className="text-sm text-muted-foreground">
-                  {atendimentoAcaoEnabled 
-                    ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
-                    : 'Desativado - senhas não são vinculadas a órgãos específicos'}
-                </p>
+            <>
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                <div>
+                  <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {atendimentoAcaoEnabled 
+                      ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
+                      : 'Desativado - senhas não são vinculadas a órgãos específicos'}
+                  </p>
+                </div>
+                <Switch
+                  id="atendimentoAcaoEnabled"
+                  checked={atendimentoAcaoEnabled}
+                  onCheckedChange={onAtendimentoAcaoEnabledChange}
+                />
               </div>
-              <Switch
-                id="atendimentoAcaoEnabled"
-                checked={atendimentoAcaoEnabled}
-                onCheckedChange={onAtendimentoAcaoEnabledChange}
-              />
-            </div>
+
+              {/* Per-Organ Numbers Toggle - only visible when Atendimento Ação is enabled */}
+              {atendimentoAcaoEnabled && (
+                <div className="flex items-center justify-between p-4 rounded-lg border bg-primary/5 ml-4">
+                  <div>
+                    <Label htmlFor="perOrganNumbersEnabled" className="font-medium">Senhas por Órgão</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {perOrganNumbersEnabled 
+                        ? 'Cada órgão usa sua própria numeração inicial (configure em Órgãos)'
+                        : 'Todos os órgãos usam a numeração global abaixo'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="perOrganNumbersEnabled"
+                    checked={perOrganNumbersEnabled}
+                    onCheckedChange={onPerOrganNumbersEnabledChange}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <Separator />
 
-          {/* Number Settings - Always visible */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Number Settings - Disabled when per-organ numbers are enabled */}
+          <div className={`grid gap-4 md:grid-cols-2 ${perOrganNumbersEnabled && atendimentoAcaoEnabled ? 'opacity-50' : ''}`}>
             <div className="space-y-2">
               <Label htmlFor="manualModeMinNumber">
                 Número Inicial - Normal
@@ -273,11 +298,14 @@ export function ManualModeSettingsCard({
                 min="0"
                 value={manualModeMinNumber}
                 onChange={(e) => onManualModeMinNumberChange(parseInt(e.target.value) || 0)}
+                disabled={perOrganNumbersEnabled && atendimentoAcaoEnabled}
               />
               <p className="text-xs text-muted-foreground">
-                {manualModeEnabled 
-                  ? 'Mínimo para senhas normais no modo manual'
-                  : 'Senhas normais iniciam a partir deste número'}
+                {perOrganNumbersEnabled && atendimentoAcaoEnabled
+                  ? 'Desativado - configure nas configurações de cada órgão'
+                  : manualModeEnabled 
+                    ? 'Mínimo para senhas normais no modo manual'
+                    : 'Senhas normais iniciam a partir deste número'}
               </p>
             </div>
 
@@ -291,11 +319,14 @@ export function ManualModeSettingsCard({
                 min="0"
                 value={manualModeMinNumberPreferential}
                 onChange={(e) => onManualModeMinNumberPreferentialChange(parseInt(e.target.value) || 0)}
+                disabled={perOrganNumbersEnabled && atendimentoAcaoEnabled}
               />
               <p className="text-xs text-muted-foreground">
-                {manualModeEnabled 
-                  ? 'Mínimo para senhas preferenciais no modo manual'
-                  : 'Senhas preferenciais iniciam a partir deste número'}
+                {perOrganNumbersEnabled && atendimentoAcaoEnabled
+                  ? 'Desativado - configure nas configurações de cada órgão'
+                  : manualModeEnabled 
+                    ? 'Mínimo para senhas preferenciais no modo manual'
+                    : 'Senhas preferenciais iniciam a partir deste número'}
               </p>
             </div>
           </div>

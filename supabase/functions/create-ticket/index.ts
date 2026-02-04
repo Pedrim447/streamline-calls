@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const fetchPromises: Promise<any>[] = [
       supabaseAdmin
         .from('settings')
-        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled')
+        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled, per_organ_numbers_enabled')
         .eq('unit_id', unit_id)
         .single(),
       supabaseAdmin
@@ -80,16 +80,17 @@ Deno.serve(async (req) => {
 
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const atendimentoAcaoEnabled = settings?.atendimento_acao_enabled ?? false;
+    const perOrganNumbersEnabled = settings?.per_organ_numbers_enabled ?? false;
     
     // Determine minimum number based on mode
     let minNumber: number;
-    if (atendimentoAcaoEnabled && organSettings) {
-      // Modo Ação: use per-organ minimums
+    if (atendimentoAcaoEnabled && perOrganNumbersEnabled && organSettings) {
+      // Modo Ação with per-organ numbers: use per-organ minimums
       minNumber = ticket_type === 'preferential' 
         ? (organSettings.min_number_preferential ?? 1)
         : (organSettings.min_number_normal ?? 1);
     } else {
-      // Standard mode: use global settings
+      // Standard mode or Ação without per-organ: use global settings
       minNumber = ticket_type === 'preferential' 
         ? (settings?.manual_mode_min_number_preferential ?? 0)
         : (settings?.manual_mode_min_number ?? 500);

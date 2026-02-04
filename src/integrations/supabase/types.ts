@@ -194,6 +194,7 @@ export type Database = {
           manual_mode_min_number_preferential: number | null
           max_retry_attempts: number | null
           normal_priority: number | null
+          per_organ_numbers_enabled: boolean | null
           preferential_priority: number | null
           reset_time: string | null
           unit_id: string
@@ -211,6 +212,7 @@ export type Database = {
           manual_mode_min_number_preferential?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
+          per_organ_numbers_enabled?: boolean | null
           preferential_priority?: number | null
           reset_time?: string | null
           unit_id: string
@@ -228,6 +230,7 @@ export type Database = {
           manual_mode_min_number_preferential?: number | null
           max_retry_attempts?: number | null
           normal_priority?: number | null
+          per_organ_numbers_enabled?: boolean | null
           preferential_priority?: number | null
           reset_time?: string | null
           unit_id?: string

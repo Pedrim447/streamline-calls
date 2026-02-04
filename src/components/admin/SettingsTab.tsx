@@ -40,6 +40,7 @@ export function SettingsTab() {
   const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
   const [callingSystemActive, setCallingSystemActive] = useState(false);
   const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
+  const [perOrganNumbersEnabled, setPerOrganNumbersEnabled] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -72,6 +73,8 @@ export function SettingsTab() {
       setCallingSystemActive(settingsRes.data.calling_system_active ?? false);
       // @ts-ignore - new columns
       setAtendimentoAcaoEnabled(settingsRes.data.atendimento_acao_enabled ?? false);
+      // @ts-ignore - new columns
+      setPerOrganNumbersEnabled(settingsRes.data.per_organ_numbers_enabled ?? false);
     }
 
     setIsLoading(false);
@@ -112,6 +115,7 @@ export function SettingsTab() {
           manual_mode_min_number: manualModeMinNumber,
           manual_mode_min_number_preferential: manualModeMinNumberPreferential,
           atendimento_acao_enabled: atendimentoAcaoEnabled,
+          per_organ_numbers_enabled: perOrganNumbersEnabled,
         })
         .eq('unit_id', DEFAULT_UNIT_ID);
 
@@ -280,11 +284,13 @@ export function SettingsTab() {
         manualModeMinNumberPreferential={manualModeMinNumberPreferential}
         callingSystemActive={callingSystemActive}
         atendimentoAcaoEnabled={atendimentoAcaoEnabled}
+        perOrganNumbersEnabled={perOrganNumbersEnabled}
         onManualModeEnabledChange={setManualModeEnabled}
         onManualModeMinNumberChange={setManualModeMinNumber}
         onManualModeMinNumberPreferentialChange={setManualModeMinNumberPreferential}
         onCallingSystemActiveChange={setCallingSystemActive}
         onAtendimentoAcaoEnabledChange={setAtendimentoAcaoEnabled}
+        onPerOrganNumbersEnabledChange={setPerOrganNumbersEnabled}
         onSettingsChange={fetchData}
       />
 
