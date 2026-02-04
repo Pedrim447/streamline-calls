@@ -12,8 +12,6 @@ interface CreateUserRequest {
   role: 'admin' | 'attendant' | 'recepcao' | 'painel';
   unit_id: string;
   matricula?: string;
-  cpf?: string;
-  birth_date?: string;
   avatar_url?: string;
 }
 
