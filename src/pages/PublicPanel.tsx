@@ -5,16 +5,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2 } from 'lucide-react';
+import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'];
 type Counter = Database['public']['Tables']['counters']['Row'];
+type Organ = Database['public']['Tables']['organs']['Row'];
 
 interface TicketWithCounter extends Ticket {
   counter?: Counter;
+  organ?: Organ;
 }
 
 export default function PublicPanel() {
