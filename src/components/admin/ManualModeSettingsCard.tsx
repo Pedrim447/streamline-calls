@@ -24,10 +24,12 @@ interface ManualModeSettingsCardProps {
   manualModeMinNumber: number;
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
+  atendimentoAcaoEnabled: boolean;
   onManualModeEnabledChange: (value: boolean) => void;
   onManualModeMinNumberChange: (value: number) => void;
   onManualModeMinNumberPreferentialChange: (value: number) => void;
   onCallingSystemActiveChange: (value: boolean) => void;
+  onAtendimentoAcaoEnabledChange: (value: boolean) => void;
   onSettingsChange: () => void;
 }
 
