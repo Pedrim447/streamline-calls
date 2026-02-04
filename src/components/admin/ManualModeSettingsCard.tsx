@@ -25,11 +25,13 @@ interface ManualModeSettingsCardProps {
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
   atendimentoAcaoEnabled: boolean;
+  perOrganNumbersEnabled: boolean;
   onManualModeEnabledChange: (value: boolean) => void;
   onManualModeMinNumberChange: (value: number) => void;
   onManualModeMinNumberPreferentialChange: (value: number) => void;
   onCallingSystemActiveChange: (value: boolean) => void;
   onAtendimentoAcaoEnabledChange: (value: boolean) => void;
+  onPerOrganNumbersEnabledChange: (value: boolean) => void;
   onSettingsChange: () => void;
 }
 
