@@ -48,6 +48,11 @@ export function useTickets(options: UseTicketsOptions = {}) {
         query = query.in('status', status);
       }
 
+      // Filter by organ IDs if provided
+      if (organIds && organIds.length > 0) {
+        query = query.in('organ_id', organIds);
+      }
+
       const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
