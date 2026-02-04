@@ -77,6 +77,19 @@ export function AttendantsTab() {
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
 
+  const fetchOrgans = async () => {
+    const { data } = await supabase
+      .from('organs')
+      .select('*')
+      .eq('unit_id', unitId)
+      .eq('is_active', true)
+      .order('name');
+    
+    if (data) {
+      setOrgans(data);
+    }
+  };
+
   const fetchProfiles = async () => {
     setIsLoading(true);
 
@@ -96,9 +109,13 @@ export function AttendantsTab() {
       console.error("Error fetching roles:", rolesError);
     }
 
+    // Fetch organ assignments for each profile
+    const { data: attendantOrgansData } = await supabase.from("attendant_organs").select("*");
+
     const profilesWithRoles: ProfileWithRoles[] = (profilesData || []).map((profile) => ({
       ...profile,
       roles: (rolesData || []).filter((r) => r.user_id === profile.user_id).map((r) => r.role),
+      organ_ids: (attendantOrgansData || []).filter((ao) => ao.user_id === profile.user_id).map((ao) => ao.organ_id),
     }));
 
     setProfiles(profilesWithRoles);
