@@ -246,21 +246,42 @@ export function ManualModeSettingsCard({
 
           {/* Atendimento Ação Toggle - only visible when manual mode is enabled */}
           {manualModeEnabled && (
-            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-              <div>
-                <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
-                <p className="text-sm text-muted-foreground">
-                  {atendimentoAcaoEnabled 
-                    ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
-                    : 'Desativado - senhas não são vinculadas a órgãos específicos'}
-                </p>
+            <>
+              <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                <div>
+                  <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {atendimentoAcaoEnabled 
+                      ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
+                      : 'Desativado - senhas não são vinculadas a órgãos específicos'}
+                  </p>
+                </div>
+                <Switch
+                  id="atendimentoAcaoEnabled"
+                  checked={atendimentoAcaoEnabled}
+                  onCheckedChange={onAtendimentoAcaoEnabledChange}
+                />
               </div>
-              <Switch
-                id="atendimentoAcaoEnabled"
-                checked={atendimentoAcaoEnabled}
-                onCheckedChange={onAtendimentoAcaoEnabledChange}
-              />
-            </div>
+
+              {/* Per-Organ Numbers Toggle - only visible when Atendimento Ação is enabled */}
+              {atendimentoAcaoEnabled && (
+                <div className="flex items-center justify-between p-4 rounded-lg border bg-primary/5 ml-4">
+                  <div>
+                    <Label htmlFor="perOrganNumbersEnabled" className="font-medium">Senhas por Órgão</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {perOrganNumbersEnabled 
+                        ? 'Cada órgão usa sua própria numeração inicial (configure em Órgãos)'
+                        : 'Todos os órgãos usam a numeração global abaixo'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="perOrganNumbersEnabled"
+                    checked={perOrganNumbersEnabled}
+                    onCheckedChange={onPerOrganNumbersEnabledChange}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <Separator />
