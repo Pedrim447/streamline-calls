@@ -14,7 +14,6 @@ interface CreateTicketRequest {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,7 +21,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreateTicketRequest = await req.json();
@@ -35,20 +33,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Creating ticket for unit:', unit_id, 'type:', ticket_type, 'manual_number:', manual_ticket_number);
-
     const today = new Date().toISOString().split('T')[0];
 
-    // Get settings for priority and manual mode
-    const { data: settings } = await supabaseAdmin
-      .from('settings')
-      .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
-      .eq('unit_id', unit_id)
-      .single();
+    // Parallel fetch: settings and counter
+    const [settingsResult, counterResult] = await Promise.all([
+      supabaseAdmin
+        .from('settings')
+        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
+        .eq('unit_id', unit_id)
+        .single(),
+      supabaseAdmin
+        .from('ticket_counters')
+        .select('id, last_number')
+        .eq('unit_id', unit_id)
+        .eq('ticket_type', ticket_type)
+        .eq('counter_date', today)
+        .maybeSingle()
+    ]);
+
+    const settings = settingsResult.data;
 
     // Check if calling system is active
-    const callingSystemActive = settings?.calling_system_active ?? false;
-    if (!callingSystemActive) {
+    if (!(settings?.calling_system_active ?? false)) {
       return new Response(
         JSON.stringify({ error: 'Sistema de chamadas não está ativo. Contate o administrador.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -56,28 +62,23 @@ Deno.serve(async (req) => {
     }
 
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
-    const manualModeMinNumber = settings?.manual_mode_min_number ?? 500;
-    const manualModeMinNumberPreferential = settings?.manual_mode_min_number_preferential ?? 0;
+    const minNumber = ticket_type === 'preferential' 
+      ? (settings?.manual_mode_min_number_preferential ?? 0)
+      : (settings?.manual_mode_min_number ?? 500);
 
     let nextNumber: number;
+    const existingCounter = counterResult.data;
 
     if (manualModeEnabled && manual_ticket_number !== undefined) {
-      // Manual mode with explicit number from reception
-      
-      // Determine the minimum based on ticket type
-      const effectiveMinNumber = ticket_type === 'preferential' 
-        ? manualModeMinNumberPreferential 
-        : manualModeMinNumber;
-      
-      // Validate minimum - number must be >= configured minimum
-      if (manual_ticket_number < effectiveMinNumber) {
+      // Manual mode validation
+      if (manual_ticket_number < minNumber) {
         return new Response(
-          JSON.stringify({ error: `Número mínimo permitido para ${ticket_type === 'preferential' ? 'preferencial' : 'normal'} é ${effectiveMinNumber}` }),
+          JSON.stringify({ error: `Número mínimo permitido para ${ticket_type === 'preferential' ? 'preferencial' : 'normal'} é ${minNumber}` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      // Check if number already exists today (same type)
+      // Check duplicate in parallel with nothing - we need this check
       const { data: existingTicket } = await supabaseAdmin
         .from('tickets')
         .select('id')
@@ -95,110 +96,36 @@ Deno.serve(async (req) => {
       }
       
       nextNumber = manual_ticket_number;
-      
-      // Update or create the counter to track this number
-      const { data: existingCounter } = await supabaseAdmin
-        .from('ticket_counters')
-        .select('*')
-        .eq('unit_id', unit_id)
-        .eq('ticket_type', ticket_type)
-        .eq('counter_date', today)
-        .maybeSingle();
-      
-      if (existingCounter) {
-        await supabaseAdmin
-          .from('ticket_counters')
-          .update({ last_number: nextNumber })
-          .eq('id', existingCounter.id);
-      } else {
-        await supabaseAdmin
-          .from('ticket_counters')
-          .insert({
-            unit_id,
-            ticket_type,
-            counter_date: today,
-            last_number: nextNumber,
-          });
-      }
     } else {
-      // Automatic mode - use counter logic
-      
-      // Determine starting number based on mode and ticket type
-      let startingNumber: number;
-      if (manualModeEnabled) {
-        startingNumber = ticket_type === 'preferential' 
-          ? manualModeMinNumberPreferential 
-          : manualModeMinNumber;
-      } else {
-        startingNumber = ticket_type === 'preferential' 
-          ? manualModeMinNumberPreferential 
-          : manualModeMinNumber;
-      }
-
-      // Get or create the counter for today
-      const { data: existingCounter } = await supabaseAdmin
-        .from('ticket_counters')
-        .select('*')
-        .eq('unit_id', unit_id)
-        .eq('ticket_type', ticket_type)
-        .eq('counter_date', today)
-        .maybeSingle();
-
-      if (!existingCounter) {
-        nextNumber = startingNumber;
-        
-        const { error: createError } = await supabaseAdmin
-          .from('ticket_counters')
-          .insert({
-            unit_id,
-            ticket_type,
-            counter_date: today,
-            last_number: nextNumber,
-          });
-
-        if (createError) {
-          console.error('Error creating counter:', createError);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao criar contador' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      } else {
-        nextNumber = existingCounter.last_number + 1;
-        
-        const effectiveMin = ticket_type === 'preferential' 
-          ? manualModeMinNumberPreferential 
-          : manualModeMinNumber;
-        
-        if (nextNumber < effectiveMin) {
-          nextNumber = effectiveMin;
-        }
-        
-        const { error: updateError } = await supabaseAdmin
-          .from('ticket_counters')
-          .update({ last_number: nextNumber })
-          .eq('id', existingCounter.id);
-
-        if (updateError) {
-          console.error('Error updating counter:', updateError);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao atualizar contador' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
+      // Automatic mode
+      nextNumber = existingCounter 
+        ? Math.max(existingCounter.last_number + 1, minNumber)
+        : minNumber;
     }
 
     // Generate display code
     const prefix = ticket_type === 'preferential' ? 'P' : 'N';
     const displayCode = `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
-
     const priority = ticket_type === 'preferential' 
       ? (settings?.preferential_priority || 10)
       : (settings?.normal_priority || 5);
 
-    // Create the ticket
-    const { data: ticket, error: ticketError } = await supabaseAdmin
+    // Upsert counter and create ticket in parallel
+    const counterPromise = existingCounter
+      ? supabaseAdmin
+          .from('ticket_counters')
+          .update({ last_number: nextNumber })
+          .eq('id', existingCounter.id)
+      : supabaseAdmin
+          .from('ticket_counters')
+          .insert({
+            unit_id,
+            ticket_type,
+            counter_date: today,
+            last_number: nextNumber,
+          });
+
+    const ticketPromise = supabaseAdmin
       .from('tickets')
       .insert({
         unit_id,
@@ -213,18 +140,18 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (ticketError) {
-      console.error('Error creating ticket:', ticketError);
+    const [, ticketResult] = await Promise.all([counterPromise, ticketPromise]);
+
+    if (ticketResult.error) {
+      console.error('Error creating ticket:', ticketResult.error);
       return new Response(
         JSON.stringify({ error: 'Erro ao criar senha' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Ticket created successfully:', displayCode, 'number:', nextNumber);
-
     return new Response(
-      JSON.stringify({ success: true, ticket }),
+      JSON.stringify({ success: true, ticket: ticketResult.data }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
