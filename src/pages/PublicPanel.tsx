@@ -223,10 +223,29 @@ export default function PublicPanel() {
         setCounters(prev => ({ ...prev, [data.id]: data }));
       }
     }
+
+    // Fetch organ info using ref
+    let organ = updatedTicket.organ_id ? organsRef.current[updatedTicket.organ_id] : undefined;
+    
+    if (!organ && updatedTicket.organ_id) {
+      console.log('[PublicPanel] Organ not in cache, fetching...');
+      const { data } = await supabase
+        .from('organs')
+        .select('*')
+        .eq('id', updatedTicket.organ_id)
+        .single();
+      
+      if (data) {
+        organ = data;
+        organsRef.current[data.id] = data;
+        setOrgans(prev => ({ ...prev, [data.id]: data }));
+      }
+    }
     
     const ticketWithCounter: TicketWithCounter = {
       ...updatedTicket,
       counter,
+      organ,
     };
     
     setIsAnimating(true);
