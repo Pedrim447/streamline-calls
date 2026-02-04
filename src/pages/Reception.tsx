@@ -235,7 +235,6 @@ export default function Reception() {
         setSelectedOrganId('');
         toast.success('Senha gerada com sucesso!');
       }
-      }
     } catch (error: any) {
       console.error('Error creating ticket:', error);
       toast.error(error.message || 'Erro ao criar senha');
