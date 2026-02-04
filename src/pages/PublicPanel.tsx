@@ -176,6 +176,7 @@ export default function PublicPanel() {
         const ticketsWithCounters = ticketData.map(ticket => ({
           ...ticket,
           counter: ticket.counter_id ? counterMap[ticket.counter_id] : undefined,
+          organ: ticket.organ_id ? organMap[ticket.organ_id] : undefined,
         }));
         
         setCurrentTicket(ticketsWithCounters[0]);
