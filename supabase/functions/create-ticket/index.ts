@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const fetchPromises: Promise<any>[] = [
       supabaseAdmin
         .from('settings')
-        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled')
+        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled, per_organ_numbers_enabled')
         .eq('unit_id', unit_id)
         .single(),
       supabaseAdmin
