@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendant_organs: {
+        Row: {
+          created_at: string
+          id: string
+          organ_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organ_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organ_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendant_organs_organ_id_fkey"
+            columns: ["organ_id"]
+            isOneToOne: false
+            referencedRelation: "organs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counters: {
         Row: {
           created_at: string
@@ -48,6 +77,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "counters_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organs: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organs_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
@@ -226,6 +293,7 @@ export type Database = {
           id: string
           locked_at: string | null
           locked_by: string | null
+          organ_id: string | null
           priority: number
           service_started_at: string | null
           service_type: string | null
@@ -250,6 +318,7 @@ export type Database = {
           id?: string
           locked_at?: string | null
           locked_by?: string | null
+          organ_id?: string | null
           priority?: number
           service_started_at?: string | null
           service_type?: string | null
@@ -274,6 +343,7 @@ export type Database = {
           id?: string
           locked_at?: string | null
           locked_by?: string | null
+          organ_id?: string | null
           priority?: number
           service_started_at?: string | null
           service_type?: string | null
@@ -290,6 +360,13 @@ export type Database = {
             columns: ["counter_id"]
             isOneToOne: false
             referencedRelation: "counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_organ_id_fkey"
+            columns: ["organ_id"]
+            isOneToOne: false
+            referencedRelation: "organs"
             referencedColumns: ["id"]
           },
           {
