@@ -509,6 +509,12 @@ export function AttendantsTab() {
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{profile.email}</span>
                         {(profile as any).matricula && <span>• Mat: {(profile as any).matricula}</span>}
+                        {profile.organ_ids.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {organs.filter(o => profile.organ_ids.includes(o.id)).map(o => o.code).join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
