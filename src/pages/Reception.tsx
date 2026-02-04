@@ -182,6 +182,11 @@ export default function Reception() {
         toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
+      // Validate organ selection if atendimento ação is enabled
+      if (atendimentoAcaoEnabled && !selectedOrganId) {
+        toast.error('Por favor, selecione o órgão de atendimento');
+        return;
+      }
       
       // Removed rule: no longer require ticket number > last generated
       // Now only requires >= minimum configured
@@ -202,6 +207,11 @@ export default function Reception() {
       // Add manual ticket number if in manual mode
       if (manualModeEnabled) {
         requestBody.manual_ticket_number = parseInt(manualTicketNumber, 10);
+      }
+      
+      // Add organ_id if atendimento ação is enabled
+      if (atendimentoAcaoEnabled && selectedOrganId) {
+        requestBody.organ_id = selectedOrganId;
       }
       
       // Call the edge function to create a ticket
