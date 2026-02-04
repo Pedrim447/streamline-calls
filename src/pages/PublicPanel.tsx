@@ -62,6 +62,14 @@ export default function PublicPanel() {
   }, [counters]);
 
   useEffect(() => {
+    organsRef.current = organs;
+  }, [organs]);
+
+  useEffect(() => {
+    atendimentoAcaoEnabledRef.current = atendimentoAcaoEnabled;
+  }, [atendimentoAcaoEnabled]);
+
+  useEffect(() => {
     callTicketRef.current = callTicket;
   }, [callTicket]);
 
