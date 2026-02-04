@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
@@ -21,78 +21,73 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
   const [lastGeneratedNormal, setLastGeneratedNormal] = useState<number | null>(null);
   const [lastGeneratedPreferential, setLastGeneratedPreferential] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const isMountedRef = useRef(true);
-  const hasFetchedRef = useRef(false);
 
   const effectiveUnitId = unitId || DEFAULT_UNIT_ID;
 
   useEffect(() => {
-    isMountedRef.current = true;
-    hasFetchedRef.current = false;
-
     const fetchSettings = async () => {
-      if (hasFetchedRef.current) return;
-      hasFetchedRef.current = true;
+      setIsLoading(true);
+      
+      // Fetch settings
+      const { data, error } = await supabase
+        .from('settings')
+        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
+        .eq('unit_id', effectiveUnitId)
+        .maybeSingle();
 
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Fetch all data in parallel
-        const [settingsResult, normalResult, preferentialResult] = await Promise.all([
-          supabase
-            .from('settings')
-            .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
-            .eq('unit_id', effectiveUnitId)
-            .maybeSingle(),
-          supabase
-            .from('tickets')
-            .select('ticket_number')
-            .eq('unit_id', effectiveUnitId)
-            .eq('ticket_type', 'normal')
-            .gte('created_at', `${today}T00:00:00`)
-            .order('ticket_number', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from('tickets')
-            .select('ticket_number')
-            .eq('unit_id', effectiveUnitId)
-            .eq('ticket_type', 'preferential')
-            .gte('created_at', `${today}T00:00:00`)
-            .order('ticket_number', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        ]);
-
-        if (!isMountedRef.current) return;
-
-        const settingsData = settingsResult.data;
-        const lastNormal = normalResult.data?.ticket_number ?? null;
-        const lastPreferential = preferentialResult.data?.ticket_number ?? null;
-
-        if (settingsData) {
-          setManualModeEnabled(settingsData.manual_mode_enabled ?? false);
-          setManualModeMinNumber(settingsData.manual_mode_min_number ?? 500);
-          setManualModeMinNumberPreferential((settingsData as any).manual_mode_min_number_preferential ?? 0);
-          setCallingSystemActive((settingsData as any).calling_system_active ?? false);
-        }
-        
-        setLastGeneratedNormal(lastNormal);
-        setLastGeneratedPreferential(lastPreferential);
-      } catch (error) {
-        console.error('Error fetching manual mode settings:', error);
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
+      if (data) {
+        setManualModeEnabled(data.manual_mode_enabled ?? false);
+        setManualModeMinNumber(data.manual_mode_min_number ?? 500);
+        // @ts-ignore - new columns
+        setManualModeMinNumberPreferential(data.manual_mode_min_number_preferential ?? 0);
+        // @ts-ignore - new columns
+        setCallingSystemActive(data.calling_system_active ?? false);
       }
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch last generated NORMAL ticket number for today
+      const { data: lastNormalTicket } = await supabase
+        .from('tickets')
+        .select('ticket_number')
+        .eq('unit_id', effectiveUnitId)
+        .eq('ticket_type', 'normal')
+        .gte('created_at', `${today}T00:00:00`)
+        .order('ticket_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (lastNormalTicket) {
+        setLastGeneratedNormal(lastNormalTicket.ticket_number);
+      } else {
+        setLastGeneratedNormal(null);
+      }
+      
+      // Fetch last generated PREFERENTIAL ticket number for today
+      const { data: lastPreferentialTicket } = await supabase
+        .from('tickets')
+        .select('ticket_number')
+        .eq('unit_id', effectiveUnitId)
+        .eq('ticket_type', 'preferential')
+        .gte('created_at', `${today}T00:00:00`)
+        .order('ticket_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (lastPreferentialTicket) {
+        setLastGeneratedPreferential(lastPreferentialTicket.ticket_number);
+      } else {
+        setLastGeneratedPreferential(null);
+      }
+      
+      setIsLoading(false);
     };
 
     fetchSettings();
 
-    // Single combined channel for all realtime updates
-    const channel = supabase
-      .channel(`manual-mode-${effectiveUnitId}`)
+    // Listen to realtime changes on settings table
+    const settingsChannel = supabase
+      .channel(`settings-manual-mode-${effectiveUnitId}`)
       .on(
         'postgres_changes',
         {
@@ -102,22 +97,20 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
           filter: `unit_id=eq.${effectiveUnitId}`,
         },
         (payload) => {
-          if (!isMountedRef.current) return;
-          const newData = payload.new as any;
+          const newData = payload.new as { manual_mode_enabled?: boolean; manual_mode_min_number?: number };
           if (newData.manual_mode_enabled !== undefined) {
             setManualModeEnabled(newData.manual_mode_enabled);
           }
           if (newData.manual_mode_min_number !== undefined) {
             setManualModeMinNumber(newData.manual_mode_min_number);
           }
-          if (newData.manual_mode_min_number_preferential !== undefined) {
-            setManualModeMinNumberPreferential(newData.manual_mode_min_number_preferential);
-          }
-          if (newData.calling_system_active !== undefined) {
-            setCallingSystemActive(newData.calling_system_active);
-          }
         }
       )
+      .subscribe();
+    
+    // Listen to new tickets to update last generated numbers by type
+    const ticketsChannel = supabase
+      .channel(`tickets-last-number-${effectiveUnitId}`)
       .on(
         'postgres_changes',
         {
@@ -127,7 +120,6 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
           filter: `unit_id=eq.${effectiveUnitId}`,
         },
         (payload) => {
-          if (!isMountedRef.current) return;
           const newTicket = payload.new as { ticket_number?: number; ticket_type?: string };
           if (newTicket.ticket_number !== undefined && newTicket.ticket_type) {
             if (newTicket.ticket_type === 'normal') {
@@ -142,17 +134,23 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
           }
         }
       )
+      .subscribe();
+
+    // Listen for system reset broadcast to zero out lastGeneratedNumbers
+    const resetChannel = supabase
+      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
       .on('broadcast', { event: 'system_reset' }, () => {
-        if (!isMountedRef.current) return;
         console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumbers');
         setLastGeneratedNormal(null);
         setLastGeneratedPreferential(null);
+        fetchSettings();
       })
       .subscribe();
 
     return () => {
-      isMountedRef.current = false;
-      supabase.removeChannel(channel);
+      supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(resetChannel);
     };
   }, [effectiveUnitId]);
 
