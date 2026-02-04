@@ -71,8 +71,6 @@ export function AttendantsTab() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<AppRole>("attendant");
   const [formMatricula, setFormMatricula] = useState("");
-  const [formCpf, setFormCpf] = useState("");
-  const [formBirthDate, setFormBirthDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
@@ -186,19 +184,6 @@ export function AttendantsTab() {
     );
   };
 
-  // Format CPF as user types
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-  };
-
-  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormCpf(formatCpf(e.target.value));
-  };
-
   const handleCreateUser = async () => {
     if (!formEmail || !formName || !formPassword) {
       toast({
@@ -230,8 +215,6 @@ export function AttendantsTab() {
           role: formRole,
           unit_id: DEFAULT_UNIT_ID,
           matricula: formMatricula || undefined,
-          cpf: formCpf || undefined,
-          birth_date: formBirthDate || undefined,
         },
       });
 
@@ -316,8 +299,6 @@ export function AttendantsTab() {
     setFormPassword("");
     setFormRole("attendant");
     setFormMatricula("");
-    setFormCpf("");
-    setFormBirthDate("");
   };
 
   const getRoleIcon = (role: AppRole) => {
@@ -393,27 +374,6 @@ export function AttendantsTab() {
                       placeholder="123456"
                       value={formMatricula}
                       onChange={(e) => setFormMatricula(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF</Label>
-                    <Input
-                      id="cpf"
-                      placeholder="000.000.000-00"
-                      value={formCpf}
-                      onChange={handleCpfChange}
-                      maxLength={14}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="birth_date">Data de Nascimento</Label>
-                    <Input
-                      id="birth_date"
-                      type="date"
-                      value={formBirthDate}
-                      onChange={(e) => setFormBirthDate(e.target.value)}
                     />
                   </div>
 
