@@ -64,7 +64,7 @@ export function useTickets(options: UseTicketsOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, limit]);
+  }, [effectiveUnitId, status, organIds, limit]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
