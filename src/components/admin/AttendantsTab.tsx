@@ -71,8 +71,6 @@ export function AttendantsTab() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<AppRole>("attendant");
   const [formMatricula, setFormMatricula] = useState("");
-  const [formCpf, setFormCpf] = useState("");
-  const [formBirthDate, setFormBirthDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
