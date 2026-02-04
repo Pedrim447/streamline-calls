@@ -37,6 +37,8 @@ interface Organ {
   is_active: boolean;
   unit_id: string;
   created_at: string;
+  min_number_normal: number;
+  min_number_preferential: number;
 }
 
 export function OrgansTab() {
