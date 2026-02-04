@@ -335,6 +335,7 @@ export async function initializeDatabase(): Promise<void> {
         is_active: true,
         current_attendant_id: null,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       await add('counters', counter);
     }
