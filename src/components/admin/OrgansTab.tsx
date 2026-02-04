@@ -172,7 +172,12 @@ export function OrgansTab() {
 
   const openEditDialog = (organ: Organ) => {
     setEditingOrgan(organ);
-    setFormData({ name: organ.name, code: organ.code });
+    setFormData({ 
+      name: organ.name, 
+      code: organ.code,
+      min_number_normal: organ.min_number_normal ?? 1,
+      min_number_preferential: organ.min_number_preferential ?? 1,
+    });
     setIsDialogOpen(true);
   };
 
