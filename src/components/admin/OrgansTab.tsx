@@ -48,7 +48,12 @@ export function OrgansTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOrgan, setEditingOrgan] = useState<Organ | null>(null);
-  const [formData, setFormData] = useState({ name: '', code: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    code: '', 
+    min_number_normal: 1, 
+    min_number_preferential: 1 
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
