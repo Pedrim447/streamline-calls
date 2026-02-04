@@ -11,6 +11,7 @@ interface CreateTicketRequest {
   client_name?: string;
   client_cpf?: string;
   manual_ticket_number?: number;
+  organ_id?: string;
 }
 
 Deno.serve(async (req) => {
