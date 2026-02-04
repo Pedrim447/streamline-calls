@@ -39,6 +39,7 @@ export function SettingsTab() {
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
   const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
   const [callingSystemActive, setCallingSystemActive] = useState(false);
+  const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
