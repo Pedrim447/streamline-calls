@@ -56,7 +56,7 @@ export default function Reception() {
   const [manualTicketNumber, setManualTicketNumber] = useState('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -434,10 +434,7 @@ export default function Reception() {
                 <div className="text-sm">
                   <p className="font-medium">Modo Manual Ativo</p>
                   <p className="text-amber-600 dark:text-amber-500">
-                    Normal: mín. {manualModeMinNumber} | última: {lastGeneratedNormal ?? '-'}
-                  </p>
-                  <p className="text-amber-600 dark:text-amber-500">
-                    Preferencial: mín. {manualModeMinNumberPreferential} | última: {lastGeneratedPreferential ?? '-'}
+                    Normal: mín. {manualModeMinNumber} | Preferencial: mín. {manualModeMinNumberPreferential}
                   </p>
                 </div>
               </div>
