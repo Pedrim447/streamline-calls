@@ -245,6 +245,34 @@ export function OrgansTab() {
                     maxLength={10}
                   />
                 </div>
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium mb-3">Senhas Iniciais (Modo Ação)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="min_normal">Atendimento</Label>
+                      <Input
+                        id="min_normal"
+                        type="number"
+                        min={1}
+                        value={formData.min_number_normal}
+                        onChange={(e) => setFormData({ ...formData, min_number_normal: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="min_preferential">Preferencial</Label>
+                      <Input
+                        id="min_preferential"
+                        type="number"
+                        min={1}
+                        value={formData.min_number_preferential}
+                        onChange={(e) => setFormData({ ...formData, min_number_preferential: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Define o número inicial das senhas para este órgão no Modo Ação
+                  </p>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
