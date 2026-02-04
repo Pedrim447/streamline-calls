@@ -391,6 +391,21 @@ export default function Dashboard() {
           </Card>
         ) : (
           <>
+            {/* Organ Filter Banner - only show when atendimento ação is active */}
+            {manualModeEnabled && atendimentoAcaoEnabled && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                <Building2 className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Atendimento Ação Ativo</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userOrgans.length > 0 
+                      ? `Visualizando senhas de: ${userOrgans.map(o => o.code).join(', ')}`
+                      : 'Você não está vinculado a nenhum órgão. Contate o administrador.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Stats */}
             <StatsCards 
               waitingCount={waitingTickets.length}
