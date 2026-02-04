@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
         status: 'waiting',
         client_name: client_name || null,
         client_cpf: client_cpf || null,
+        organ_id: organ_id || null,
       })
       .select()
       .single();
