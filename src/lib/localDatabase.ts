@@ -46,6 +46,7 @@ export interface Counter {
   is_active: boolean;
   current_attendant_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Ticket {
