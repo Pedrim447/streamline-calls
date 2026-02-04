@@ -8,7 +8,6 @@ import {
   Users, 
   Monitor, 
   Settings, 
-  FileText,
   LogOut,
   Shield,
   ArrowLeft,
@@ -17,7 +16,6 @@ import {
 import { AttendantsTab } from '@/components/admin/AttendantsTab';
 import { CountersTab } from '@/components/admin/CountersTab';
 import { SettingsTab } from '@/components/admin/SettingsTab';
-import { AuditLogsTab } from '@/components/admin/AuditLogsTab';
 
 export default function Admin() {
   const navigate = useNavigate();
