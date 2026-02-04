@@ -70,6 +70,8 @@ export function SettingsTab() {
       setManualModeMinNumberPreferential(settingsRes.data.manual_mode_min_number_preferential ?? 0);
       // @ts-ignore - new columns
       setCallingSystemActive(settingsRes.data.calling_system_active ?? false);
+      // @ts-ignore - new columns
+      setAtendimentoAcaoEnabled(settingsRes.data.atendimento_acao_enabled ?? false);
     }
 
     setIsLoading(false);
