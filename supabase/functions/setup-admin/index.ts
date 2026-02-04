@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SETUP_SECRET = 'filafacil-setup-2024';
+const SETUP_SECRET = Deno.env.get('SETUP_SECRET');
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 Deno.serve(async (req) => {
