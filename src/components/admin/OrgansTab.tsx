@@ -37,6 +37,8 @@ interface Organ {
   is_active: boolean;
   unit_id: string;
   created_at: string;
+  min_number_normal: number;
+  min_number_preferential: number;
 }
 
 export function OrgansTab() {
@@ -46,7 +48,12 @@ export function OrgansTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOrgan, setEditingOrgan] = useState<Organ | null>(null);
-  const [formData, setFormData] = useState({ name: '', code: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    code: '', 
+    min_number_normal: 1, 
+    min_number_preferential: 1 
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
@@ -85,7 +92,12 @@ export function OrgansTab() {
       if (editingOrgan) {
         const { error } = await supabase
           .from('organs')
-          .update({ name: formData.name, code: formData.code.toUpperCase() })
+          .update({ 
+            name: formData.name, 
+            code: formData.code.toUpperCase(),
+            min_number_normal: formData.min_number_normal,
+            min_number_preferential: formData.min_number_preferential,
+          })
           .eq('id', editingOrgan.id);
 
         if (error) throw error;
@@ -98,6 +110,8 @@ export function OrgansTab() {
             code: formData.code.toUpperCase(),
             unit_id: unitId,
             is_active: true,
+            min_number_normal: formData.min_number_normal,
+            min_number_preferential: formData.min_number_preferential,
           });
 
         if (error) throw error;
@@ -106,7 +120,7 @@ export function OrgansTab() {
 
       setIsDialogOpen(false);
       setEditingOrgan(null);
-      setFormData({ name: '', code: '' });
+      setFormData({ name: '', code: '', min_number_normal: 1, min_number_preferential: 1 });
       fetchOrgans();
     } catch (error: any) {
       toast({
@@ -158,13 +172,18 @@ export function OrgansTab() {
 
   const openEditDialog = (organ: Organ) => {
     setEditingOrgan(organ);
-    setFormData({ name: organ.name, code: organ.code });
+    setFormData({ 
+      name: organ.name, 
+      code: organ.code,
+      min_number_normal: organ.min_number_normal ?? 1,
+      min_number_preferential: organ.min_number_preferential ?? 1,
+    });
     setIsDialogOpen(true);
   };
 
   const openNewDialog = () => {
     setEditingOrgan(null);
-    setFormData({ name: '', code: '' });
+    setFormData({ name: '', code: '', min_number_normal: 1, min_number_preferential: 1 });
     setIsDialogOpen(true);
   };
 
@@ -226,6 +245,34 @@ export function OrgansTab() {
                     maxLength={10}
                   />
                 </div>
+                <div className="pt-4 border-t">
+                  <p className="text-sm font-medium mb-3">Senhas Iniciais (Modo Ação)</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="min_normal">Atendimento</Label>
+                      <Input
+                        id="min_normal"
+                        type="number"
+                        min={1}
+                        value={formData.min_number_normal}
+                        onChange={(e) => setFormData({ ...formData, min_number_normal: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="min_preferential">Preferencial</Label>
+                      <Input
+                        id="min_preferential"
+                        type="number"
+                        min={1}
+                        value={formData.min_number_preferential}
+                        onChange={(e) => setFormData({ ...formData, min_number_preferential: parseInt(e.target.value) || 1 })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Define o número inicial das senhas para este órgão no Modo Ação
+                  </p>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -252,6 +299,7 @@ export function OrgansTab() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead className="text-center">Senha Inicial</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -263,6 +311,12 @@ export function OrgansTab() {
                     <Badge variant="outline">{organ.code}</Badge>
                   </TableCell>
                   <TableCell>{organ.name}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="text-xs space-y-1">
+                      <div>N: {organ.min_number_normal ?? 1}</div>
+                      <div>P: {organ.min_number_preferential ?? 1}</div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Switch
                       checked={organ.is_active}

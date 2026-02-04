@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Parallel fetch: settings and counter
-    const [settingsResult, counterResult] = await Promise.all([
+    // Parallel fetch: settings, counter, and organ (if provided)
+    const fetchPromises: Promise<any>[] = [
       supabaseAdmin
         .from('settings')
-        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
+        .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled')
         .eq('unit_id', unit_id)
         .single(),
       supabaseAdmin
@@ -49,9 +49,26 @@ Deno.serve(async (req) => {
         .eq('ticket_type', ticket_type)
         .eq('counter_date', today)
         .maybeSingle()
-    ]);
+    ];
+
+    // If organ_id provided, also fetch organ settings
+    if (organ_id) {
+      fetchPromises.push(
+        supabaseAdmin
+          .from('organs')
+          .select('min_number_normal, min_number_preferential')
+          .eq('id', organ_id)
+          .single()
+      );
+    }
+
+    const results = await Promise.all(fetchPromises);
+    const settingsResult = results[0];
+    const counterResult = results[1];
+    const organResult = organ_id ? results[2] : null;
 
     const settings = settingsResult.data;
+    const organSettings = organResult?.data;
 
     // Check if calling system is active
     if (!(settings?.calling_system_active ?? false)) {
@@ -62,9 +79,21 @@ Deno.serve(async (req) => {
     }
 
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
-    const minNumber = ticket_type === 'preferential' 
-      ? (settings?.manual_mode_min_number_preferential ?? 0)
-      : (settings?.manual_mode_min_number ?? 500);
+    const atendimentoAcaoEnabled = settings?.atendimento_acao_enabled ?? false;
+    
+    // Determine minimum number based on mode
+    let minNumber: number;
+    if (atendimentoAcaoEnabled && organSettings) {
+      // Modo Ação: use per-organ minimums
+      minNumber = ticket_type === 'preferential' 
+        ? (organSettings.min_number_preferential ?? 1)
+        : (organSettings.min_number_normal ?? 1);
+    } else {
+      // Standard mode: use global settings
+      minNumber = ticket_type === 'preferential' 
+        ? (settings?.manual_mode_min_number_preferential ?? 0)
+        : (settings?.manual_mode_min_number ?? 500);
+    }
 
     let nextNumber: number;
     const existingCounter = counterResult.data;

@@ -90,6 +90,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          min_number_normal: number | null
+          min_number_preferential: number | null
           name: string
           unit_id: string
           updated_at: string
@@ -99,6 +101,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          min_number_normal?: number | null
+          min_number_preferential?: number | null
           name: string
           unit_id: string
           updated_at?: string
@@ -108,6 +112,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          min_number_normal?: number | null
+          min_number_preferential?: number | null
           name?: string
           unit_id?: string
           updated_at?: string
