@@ -204,8 +204,12 @@ export default function Reception() {
       const requestBody: Record<string, unknown> = {
         unit_id: unitId,
         ticket_type: ticketType,
-        client_name: clientName.trim(),
       };
+      
+      // Only include client name if NOT in Atendimento Ação mode
+      if (!atendimentoAcaoEnabled && clientName.trim()) {
+        requestBody.client_name = clientName.trim();
+      }
       
       // Add manual ticket number if in manual mode
       if (manualModeEnabled) {
