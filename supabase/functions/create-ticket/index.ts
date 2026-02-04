@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreateTicketRequest = await req.json();
-    const { unit_id, ticket_type, client_name, client_cpf, manual_ticket_number } = body;
+    const { unit_id, ticket_type, client_name, client_cpf, manual_ticket_number, organ_id } = body;
 
     if (!unit_id || !ticket_type) {
       return new Response(
