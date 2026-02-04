@@ -101,6 +101,19 @@ export default function PublicPanel() {
     const loadInitialData = async () => {
       console.log('[PublicPanel] Loading initial data for unit:', unitId);
       
+      // Fetch settings to check if Atendimento Ação is enabled
+      const { data: settingsData } = await supabase
+        .from('settings')
+        .select('atendimento_acao_enabled, manual_mode_enabled')
+        .eq('unit_id', unitId)
+        .maybeSingle();
+      
+      const isAtendimentoAcaoActive = settingsData?.manual_mode_enabled && settingsData?.atendimento_acao_enabled;
+      if (isMounted) {
+        setAtendimentoAcaoEnabled(isAtendimentoAcaoActive ?? false);
+        atendimentoAcaoEnabledRef.current = isAtendimentoAcaoActive ?? false;
+      }
+      
       // Fetch counters for the unit
       const { data: counterData, error: counterError } = await supabase
         .from('counters')
@@ -118,6 +131,27 @@ export default function PublicPanel() {
         if (isMounted) {
           setCounters(counterMap);
           countersRef.current = counterMap;
+        }
+      }
+
+      // Fetch organs for the unit
+      const { data: organData, error: organError } = await supabase
+        .from('organs')
+        .select('*')
+        .eq('unit_id', unitId)
+        .eq('is_active', true);
+      
+      if (organError) {
+        console.error('[PublicPanel] Error fetching organs:', organError);
+      }
+      
+      let organMap: Record<string, Organ> = {};
+      if (organData) {
+        console.log('[PublicPanel] Organs loaded:', organData.length);
+        organData.forEach(o => { organMap[o.id] = o; });
+        if (isMounted) {
+          setOrgans(organMap);
+          organsRef.current = organMap;
         }
       }
 
