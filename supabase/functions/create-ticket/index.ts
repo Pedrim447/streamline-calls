@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
 
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const atendimentoAcaoEnabled = settings?.atendimento_acao_enabled ?? false;
+    const perOrganNumbersEnabled = settings?.per_organ_numbers_enabled ?? false;
     
     // Determine minimum number based on mode
     let minNumber: number;
