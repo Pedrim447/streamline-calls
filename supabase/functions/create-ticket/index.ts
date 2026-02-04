@@ -9,7 +9,6 @@ interface CreateTicketRequest {
   unit_id: string;
   ticket_type: 'normal' | 'preferential';
   client_name?: string;
-  client_cpf?: string;
   manual_ticket_number?: number;
   organ_id?: string;
 }
@@ -27,7 +26,7 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CreateTicketRequest = await req.json();
-    const { unit_id, ticket_type, client_name, client_cpf, manual_ticket_number, organ_id } = body;
+    const { unit_id, ticket_type, client_name, manual_ticket_number, organ_id } = body;
 
     if (!unit_id || !ticket_type) {
       return new Response(
@@ -209,7 +208,6 @@ Deno.serve(async (req) => {
         priority,
         status: 'waiting',
         client_name: client_name || null,
-        client_cpf: client_cpf || null,
         organ_id: organ_id || null,
       })
       .select()
