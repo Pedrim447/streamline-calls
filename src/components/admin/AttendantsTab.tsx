@@ -559,6 +559,58 @@ export function AttendantsTab() {
           )}
         </div>
       </CardContent>
+
+      {/* Organs Assignment Dialog */}
+      <Dialog open={isOrgansDialogOpen} onOpenChange={setIsOrgansDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Órgãos do Atendente</DialogTitle>
+            <DialogDescription>
+              Selecione os órgãos que {selectedProfile?.full_name} poderá atender
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {organs.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum órgão cadastrado. Cadastre órgãos na aba "Órgãos".
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {organs.map((organ) => (
+                  <div 
+                    key={organ.id}
+                    className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                    onClick={() => toggleOrgan(organ.id)}
+                  >
+                    <Checkbox
+                      id={`organ-${organ.id}`}
+                      checked={selectedOrgans.includes(organ.id)}
+                      onCheckedChange={() => toggleOrgan(organ.id)}
+                    />
+                    <label 
+                      htmlFor={`organ-${organ.id}`}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <span className="font-medium">{organ.code}</span>
+                      <span className="text-muted-foreground ml-2">- {organ.name}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOrgansDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveOrgans} disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
