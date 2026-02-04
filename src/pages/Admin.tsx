@@ -137,10 +137,6 @@ export default function Admin() {
           <TabsContent value="settings">
             <SettingsTab />
           </TabsContent>
-
-          <TabsContent value="logs">
-            <AuditLogsTab />
-          </TabsContent>
         </Tabs>
       </main>
     </div>

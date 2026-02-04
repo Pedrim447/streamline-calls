@@ -213,16 +213,6 @@ Deno.serve(async (req) => {
 
       console.log('Ticket skipped:', skippedTicket.display_code);
 
-      // Log the action
-      await supabaseAdmin.from('audit_logs').insert({
-        action: 'ticket_skipped',
-        entity_type: 'ticket',
-        entity_id: skippedTicket.id,
-        user_id: userId,
-        unit_id: skippedTicket.unit_id,
-        details: { skip_reason, display_code: skippedTicket.display_code },
-      });
-
       return new Response(
         JSON.stringify({ success: true, ticket: skippedTicket }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
