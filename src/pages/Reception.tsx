@@ -232,7 +232,9 @@ export default function Reception() {
         setClientName('');
         setTicketType('normal');
         setManualTicketNumber('');
+        setSelectedOrganId('');
         toast.success('Senha gerada com sucesso!');
+      }
       }
     } catch (error: any) {
       console.error('Error creating ticket:', error);
