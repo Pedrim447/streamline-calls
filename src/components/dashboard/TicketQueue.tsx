@@ -5,9 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { Database } from '@/integrations/supabase/types';
-
-type Ticket = Database['public']['Tables']['tickets']['Row'];
+import type { Ticket } from '@/lib/localDatabase';
 
 interface TicketQueueProps {
   tickets: Ticket[];
@@ -67,8 +65,8 @@ export function TicketQueue({ tickets, isLoading }: TicketQueueProps) {
                   key={ticket.id}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                     ticket.ticket_type === 'preferential'
-                      ? 'bg-ticket-preferential/10 border-ticket-preferential/30'
-                      : 'bg-ticket-normal/10 border-ticket-normal/30'
+                      ? 'bg-amber-500/10 border-amber-500/30'
+                      : 'bg-emerald-500/10 border-emerald-500/30'
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -79,8 +77,8 @@ export function TicketQueue({ tickets, isLoading }: TicketQueueProps) {
                       <span 
                         className={`text-lg font-bold ${
                           ticket.ticket_type === 'preferential'
-                            ? 'text-ticket-preferential'
-                            : 'text-ticket-normal'
+                            ? 'text-amber-500'
+                            : 'text-emerald-500'
                         }`}
                       >
                         {ticket.display_code}
@@ -89,8 +87,8 @@ export function TicketQueue({ tickets, isLoading }: TicketQueueProps) {
                         variant="outline" 
                         className={`ml-2 text-xs ${
                           ticket.ticket_type === 'preferential'
-                            ? 'border-ticket-preferential text-ticket-preferential'
-                            : 'border-ticket-normal text-ticket-normal'
+                            ? 'border-amber-500 text-amber-500'
+                            : 'border-emerald-500 text-emerald-500'
                         }`}
                       >
                         {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Normal'}

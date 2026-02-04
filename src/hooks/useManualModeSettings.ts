@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
+import * as localDb from '@/lib/localDatabase';
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
@@ -12,119 +12,81 @@ interface ManualModeSettings {
   isLoading: boolean;
 }
 
-export function useManualModeSettings(unitId?: string): ManualModeSettings {
+export function useManualModeSettings(unitId?: string | null): ManualModeSettings {
   const [manualModeEnabled, setManualModeEnabled] = useState(false);
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
   const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
-  const [callingSystemActive, setCallingSystemActive] = useState(false);
+  const [callingSystemActive, setCallingSystemActive] = useState(true);
   const [lastGeneratedNumber, setLastGeneratedNumber] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const effectiveUnitId = unitId || DEFAULT_UNIT_ID;
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-      setIsLoading(true);
+  const fetchSettings = useCallback(async () => {
+    setIsLoading(true);
+    
+    try {
+      const settings = await localDb.getSettings(effectiveUnitId);
       
-      // Fetch settings
-      const { data, error } = await supabase
-        .from('settings')
-        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
-        .eq('unit_id', effectiveUnitId)
-        .maybeSingle();
-
-      if (data) {
-        setManualModeEnabled(data.manual_mode_enabled ?? false);
-        setManualModeMinNumber(data.manual_mode_min_number ?? 500);
-        // @ts-ignore - new columns
-        setManualModeMinNumberPreferential(data.manual_mode_min_number_preferential ?? 0);
-        // @ts-ignore - new columns
-        setCallingSystemActive(data.calling_system_active ?? false);
+      if (settings) {
+        setManualModeEnabled(settings.manual_mode_enabled);
+        setManualModeMinNumber(settings.manual_mode_min_number);
+        setManualModeMinNumberPreferential(settings.manual_mode_min_number_preferential);
+        setCallingSystemActive(settings.calling_system_active);
       }
       
       // Fetch last generated ticket number for today
       const today = new Date().toISOString().split('T')[0];
-      const { data: lastTicket } = await supabase
-        .from('tickets')
-        .select('ticket_number')
-        .eq('unit_id', effectiveUnitId)
-        .gte('created_at', `${today}T00:00:00`)
-        .order('ticket_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const tickets = await localDb.getTickets(effectiveUnitId);
+      const todayTickets = tickets.filter(t => t.created_at.startsWith(today));
       
-      if (lastTicket) {
-        setLastGeneratedNumber(lastTicket.ticket_number);
+      if (todayTickets.length > 0) {
+        const maxNumber = Math.max(...todayTickets.map(t => t.ticket_number));
+        setLastGeneratedNumber(maxNumber);
+      } else {
+        setLastGeneratedNumber(null);
       }
-      
-      setIsLoading(false);
-    };
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+    
+    setIsLoading(false);
+  }, [effectiveUnitId]);
 
+  useEffect(() => {
     fetchSettings();
 
-    // Listen to realtime changes on settings table
-    const settingsChannel = supabase
-      .channel(`settings-manual-mode-${effectiveUnitId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'settings',
-          filter: `unit_id=eq.${effectiveUnitId}`,
-        },
-        (payload) => {
-          const newData = payload.new as { manual_mode_enabled?: boolean; manual_mode_min_number?: number };
-          if (newData.manual_mode_enabled !== undefined) {
-            setManualModeEnabled(newData.manual_mode_enabled);
-          }
-          if (newData.manual_mode_min_number !== undefined) {
-            setManualModeMinNumber(newData.manual_mode_min_number);
-          }
-        }
-      )
-      .subscribe();
-    
-    // Listen to new tickets to update last generated number
-    const ticketsChannel = supabase
-      .channel(`tickets-last-number-${effectiveUnitId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tickets',
-          filter: `unit_id=eq.${effectiveUnitId}`,
-        },
-        (payload) => {
-          const newTicket = payload.new as { ticket_number?: number };
-          if (newTicket.ticket_number !== undefined) {
-            setLastGeneratedNumber(prev => 
-              prev === null ? newTicket.ticket_number! : Math.max(prev, newTicket.ticket_number!)
-            );
-          }
-        }
-      )
-      .subscribe();
+    // Subscribe to settings updates
+    const unsubscribeSettings = localDb.subscribeToEvent('settings_updated', (settings) => {
+      if (settings.unit_id === effectiveUnitId) {
+        setManualModeEnabled(settings.manual_mode_enabled);
+        setManualModeMinNumber(settings.manual_mode_min_number);
+        setManualModeMinNumberPreferential(settings.manual_mode_min_number_preferential);
+        setCallingSystemActive(settings.calling_system_active);
+      }
+    });
 
-    // Listen for system reset broadcast to zero out lastGeneratedNumber
-    // IMPORTANT: Use fixed DEFAULT_UNIT_ID to match the admin broadcast channel
-    const resetChannel = supabase
-      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
-      .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[useManualModeSettings] System reset - clearing lastGeneratedNumber');
-        setLastGeneratedNumber(null);
-        // Re-fetch to confirm tickets are gone (should return null)
-        fetchSettings();
-      })
-      .subscribe();
+    // Subscribe to new tickets
+    const unsubscribeTickets = localDb.subscribeToEvent('ticket_created', (ticket) => {
+      if (ticket.unit_id === effectiveUnitId) {
+        setLastGeneratedNumber(prev => 
+          prev === null ? ticket.ticket_number : Math.max(prev, ticket.ticket_number)
+        );
+      }
+    });
+
+    // Subscribe to system reset
+    const unsubscribeReset = localDb.subscribeToEvent('system_reset', () => {
+      setLastGeneratedNumber(null);
+      fetchSettings();
+    });
 
     return () => {
-      supabase.removeChannel(settingsChannel);
-      supabase.removeChannel(ticketsChannel);
-      supabase.removeChannel(resetChannel);
+      unsubscribeSettings();
+      unsubscribeTickets();
+      unsubscribeReset();
     };
-  }, [effectiveUnitId]);
+  }, [effectiveUnitId, fetchSettings]);
 
   return {
     manualModeEnabled,
