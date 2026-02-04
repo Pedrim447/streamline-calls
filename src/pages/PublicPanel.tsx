@@ -266,13 +266,26 @@ export default function PublicPanel() {
       setCurrentTicket(ticketWithCounter);
     }
     
-    // Play voice announcement using ref with ticket type and client first name (voice only, not displayed)
+    // Play voice announcement using ref
+    // In Atendimento Ação mode: announce organ instead of client name
     if (counter && soundEnabledRef.current) {
-      console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
-      callTicketRef.current(updatedTicket.display_code, counter.number, {
+      console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type, 'atendimentoAcao:', atendimentoAcaoEnabledRef.current);
+      
+      const voiceOptions: { ticketType: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {
         ticketType: updatedTicket.ticket_type,
-        clientName: updatedTicket.client_name, // Pass name for voice announcement only
-      });
+        clientName: undefined,
+        organName: undefined,
+      };
+      
+      if (atendimentoAcaoEnabledRef.current && organ) {
+        // Atendimento Ação mode: use organ name instead of client name
+        voiceOptions.organName = organ.name;
+      } else {
+        // Normal mode: use client name
+        voiceOptions.clientName = updatedTicket.client_name;
+      }
+      
+      callTicketRef.current(updatedTicket.display_code, counter.number, voiceOptions);
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
     }
