@@ -28,16 +28,20 @@ export default function PublicPanel() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
+  const [organs, setOrgans] = useState<Record<string, Organ>>({});
+  const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const countersRef = useRef<Record<string, Counter>>({});
+  const organsRef = useRef<Record<string, Organ>>({});
+  const atendimentoAcaoEnabledRef = useRef(false);
   const soundEnabledRef = useRef(false);
   const lastCalledAtRef = useRef<Record<string, string>>({});
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null }
   ) => void>(() => {});
   const { callTicket, playAlertSound } = useVoice();
 
