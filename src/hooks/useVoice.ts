@@ -143,14 +143,20 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     // Build the complete message
     let message = '';
     
-    // Add client name greeting if available
-    if (clientName && clientName.trim().length > 0) {
-      const firstName = clientName.trim().split(' ')[0];
-      message = `Atenção ${firstName}. `;
+    // If organName is provided (Atendimento Ação mode), use organ-focused message
+    // Otherwise, use client name greeting if available
+    if (organName && organName.trim().length > 0) {
+      // Atendimento Ação mode: announce organ instead of client name
+      message = `${ticketTypeSpoken} número ${ticketNumberSpoken}, ${organName}, dirija-se ao guichê ${counterSpoken}.`;
+    } else {
+      // Normal mode: use client name greeting if available
+      if (clientName && clientName.trim().length > 0) {
+        const firstName = clientName.trim().split(' ')[0];
+        message = `Atenção ${firstName}. `;
+      }
+      // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
+      message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
     }
-    
-    // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
-    message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
 
     console.log('Speaking:', message);
 
