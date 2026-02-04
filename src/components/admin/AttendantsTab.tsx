@@ -124,7 +124,67 @@ export function AttendantsTab() {
 
   useEffect(() => {
     fetchProfiles();
-  }, []);
+    fetchOrgans();
+  }, [unitId]);
+
+  const openOrgansDialog = (profile: ProfileWithRoles) => {
+    setSelectedProfile(profile);
+    setSelectedOrgans(profile.organ_ids);
+    setIsOrgansDialogOpen(true);
+  };
+
+  const handleSaveOrgans = async () => {
+    if (!selectedProfile) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Remove all existing organ assignments
+      await supabase
+        .from('attendant_organs')
+        .delete()
+        .eq('user_id', selectedProfile.user_id);
+      
+      // Add new assignments
+      if (selectedOrgans.length > 0) {
+        const { error } = await supabase
+          .from('attendant_organs')
+          .insert(
+            selectedOrgans.map(organId => ({
+              user_id: selectedProfile.user_id,
+              organ_id: organId,
+            }))
+          );
+        
+        if (error) throw error;
+      }
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Órgãos atualizados com sucesso',
+      });
+      
+      setIsOrgansDialogOpen(false);
+      fetchProfiles();
+    } catch (error) {
+      console.error('Error saving organs:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar órgãos',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleOrgan = (organId: string) => {
+    setSelectedOrgans(prev => 
+      prev.includes(organId) 
+        ? prev.filter(id => id !== organId)
+        : [...prev, organId]
+    );
+  };
 
   // Format CPF as user types
   const formatCpf = (value: string) => {
