@@ -56,7 +56,7 @@ export default function Reception() {
   const [manualTicketNumber, setManualTicketNumber] = useState('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -177,10 +177,8 @@ export default function Reception() {
         return;
       }
       
-      if (lastGeneratedNumber !== null && ticketNum <= lastGeneratedNumber) {
-        toast.error(`O número da senha deve ser maior que ${lastGeneratedNumber} (última senha gerada)`);
-        return;
-      }
+      // Removed rule: no longer require ticket number > last generated
+      // Now only requires >= minimum configured
     }
 
     setIsCreating(true);
@@ -436,7 +434,10 @@ export default function Reception() {
                 <div className="text-sm">
                   <p className="font-medium">Modo Manual Ativo</p>
                   <p className="text-amber-600 dark:text-amber-500">
-                    Normal: mín. {manualModeMinNumber} | Preferencial: mín. {manualModeMinNumberPreferential} | Última gerada: {lastGeneratedNumber ?? 'Nenhuma'}
+                    Normal: mín. {manualModeMinNumber} | última: {lastGeneratedNormal ?? '-'}
+                  </p>
+                  <p className="text-amber-600 dark:text-amber-500">
+                    Preferencial: mín. {manualModeMinNumberPreferential} | última: {lastGeneratedPreferential ?? '-'}
                   </p>
                 </div>
               </div>
@@ -477,20 +478,14 @@ export default function Reception() {
                 <Input
                   id="ticketNumber"
                   type="number"
-                  placeholder={`Mínimo: ${Math.max(
-                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
-                    (lastGeneratedNumber ?? 0) + 1
-                  )}`}
+                  placeholder={`Mínimo: ${ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}`}
                   value={manualTicketNumber}
                   onChange={(e) => setManualTicketNumber(e.target.value)}
-                  min={Math.max(
-                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
-                    (lastGeneratedNumber ?? 0) + 1
-                  )}
+                  min={ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
                   disabled={!callingSystemActive}
                 />
                 <p className="text-xs text-muted-foreground">
-                  O próximo número deve ser maior que {lastGeneratedNumber ?? (ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber) - 1}
+                  Número mínimo permitido: {ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
                 </p>
               </div>
             )}

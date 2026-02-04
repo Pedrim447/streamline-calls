@@ -35,7 +35,7 @@ export default function PublicPanel() {
   const callTicketRef = useRef<(
     code: string, 
     counter: number,
-    options: { ticketType?: 'normal' | 'preferential' }
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null }
   ) => void>(() => {});
   const { callTicket, playAlertSound } = useVoice();
 
@@ -107,15 +107,14 @@ export default function PublicPanel() {
         }
       }
 
-      // Fetch recent tickets - ONLY from today
+      // Fetch recent called tickets - from today, any status that has been called
       const today = new Date().toISOString().split('T')[0];
       const { data: ticketData, error: ticketError } = await supabase
         .from('tickets')
         .select('*')
         .eq('unit_id', unitId)
-        .in('status', ['called', 'in_service'])
         .not('called_at', 'is', null)
-        .gte('created_at', `${today}T00:00:00`)
+        .gte('called_at', `${today}T00:00:00`)
         .order('called_at', { ascending: false })
         .limit(6);
 
@@ -199,11 +198,12 @@ export default function PublicPanel() {
       setCurrentTicket(ticketWithCounter);
     }
     
-    // Play voice announcement using ref with ticket type (NO client name)
+    // Play voice announcement using ref with ticket type and client first name (voice only, not displayed)
     if (counter && soundEnabledRef.current) {
       console.log('[PublicPanel] Playing voice for counter:', counter.number, 'type:', updatedTicket.ticket_type);
       callTicketRef.current(updatedTicket.display_code, counter.number, {
         ticketType: updatedTicket.ticket_type,
+        clientName: updatedTicket.client_name, // Pass name for voice announcement only
       });
     } else if (!soundEnabledRef.current) {
       console.log('[PublicPanel] Sound not enabled - user needs to click to enable');
@@ -223,50 +223,39 @@ export default function PublicPanel() {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'tickets',
           filter: `unit_id=eq.${unitId}`,
         },
         (payload) => {
-          console.log('[PublicPanel] Ticket updated:', payload);
-          const updatedTicket = payload.new as Ticket;
-          const oldTicket = payload.old as Partial<Ticket>;
+          console.log('[PublicPanel] Ticket change:', payload.eventType, payload);
           
-          // Check if this is a called/in_service ticket with called_at
+          if (payload.eventType === 'DELETE') {
+            console.log('[PublicPanel] Ticket deleted');
+            return;
+          }
+          
+          const updatedTicket = payload.new as Ticket;
+          
+          // Check if this ticket has been called (has called_at and is called/in_service)
           if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
             const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
             
-            // Detect new call: status changed from waiting to called/in_service
-            const isNewCall = oldTicket.status === 'waiting';
-            
-            // Detect repeat call: called_at timestamp changed
-            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at && !isNewCall;
+            // Trigger voice if:
+            // 1. This ticket wasn't tracked before (new call)
+            // 2. OR called_at timestamp changed (repeat call)
+            const isNewCall = !previousCalledAt;
+            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
             
             // Update ref with new called_at
             lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
             
-            // Trigger voice for new calls or repeat calls
             if (isNewCall || isRepeatCall) {
               console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
               handleNewCall(updatedTicket, isRepeatCall);
             }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'tickets',
-          filter: `unit_id=eq.${unitId}`,
-        },
-        () => {
-          console.log('[PublicPanel] Ticket deleted, clearing display...');
-          setCurrentTicket(null);
-          setLastCalls([]);
-          lastCalledAtRef.current = {};
         }
       )
       .subscribe((status) => {
