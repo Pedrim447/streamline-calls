@@ -183,6 +183,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          atendimento_acao_enabled: boolean | null
           auto_reset_daily: boolean | null
           calling_system_active: boolean | null
           created_at: string
@@ -199,6 +200,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          atendimento_acao_enabled?: boolean | null
           auto_reset_daily?: boolean | null
           calling_system_active?: boolean | null
           created_at?: string
@@ -215,6 +217,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          atendimento_acao_enabled?: boolean | null
           auto_reset_daily?: boolean | null
           calling_system_active?: boolean | null
           created_at?: string

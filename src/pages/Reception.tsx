@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useManualModeSettings } from '@/hooks/useManualModeSettings';
+import { useOrgans } from '@/hooks/useOrgans';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Building2
 } from 'lucide-react';
 import {
   Dialog,
@@ -54,9 +56,13 @@ export default function Reception() {
   const [clientName, setClientName] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
   const [manualTicketNumber, setManualTicketNumber] = useState('');
+  const [selectedOrganId, setSelectedOrganId] = useState<string>('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, atendimentoAcaoEnabled, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
+  
+  // Get organs
+  const { organs, isLoading: organsLoading } = useOrgans();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -176,6 +182,11 @@ export default function Reception() {
         toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
+      // Validate organ selection if atendimento ação is enabled
+      if (atendimentoAcaoEnabled && !selectedOrganId) {
+        toast.error('Por favor, selecione o órgão de atendimento');
+        return;
+      }
       
       // Removed rule: no longer require ticket number > last generated
       // Now only requires >= minimum configured
@@ -198,6 +209,11 @@ export default function Reception() {
         requestBody.manual_ticket_number = parseInt(manualTicketNumber, 10);
       }
       
+      // Add organ_id if atendimento ação is enabled
+      if (atendimentoAcaoEnabled && selectedOrganId) {
+        requestBody.organ_id = selectedOrganId;
+      }
+      
       // Call the edge function to create a ticket
       const { data, error } = await supabase.functions.invoke('create-ticket', {
         body: requestBody,
@@ -216,6 +232,7 @@ export default function Reception() {
         setClientName('');
         setTicketType('normal');
         setManualTicketNumber('');
+        setSelectedOrganId('');
         toast.success('Senha gerada com sucesso!');
       }
     } catch (error: any) {
@@ -490,7 +507,40 @@ export default function Reception() {
               </div>
             )}
 
-            <Button 
+            {/* Organ Selector - only show when atendimento ação is enabled */}
+            {manualModeEnabled && atendimentoAcaoEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="organSelect">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Órgão de Atendimento *
+                  </span>
+                </Label>
+                <Select
+                  value={selectedOrganId}
+                  onValueChange={setSelectedOrganId}
+                  disabled={!callingSystemActive || organsLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o órgão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organs.map((organ) => (
+                      <SelectItem key={organ.id} value={organ.id}>
+                        {organ.code} - {organ.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {organs.length === 0 && !organsLoading && (
+                  <p className="text-xs text-destructive">
+                    Nenhum órgão cadastrado. Peça ao administrador para cadastrar.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Button
               size="lg" 
               className="w-full"
               onClick={handleCreateTicket}

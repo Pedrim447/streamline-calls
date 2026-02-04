@@ -24,10 +24,12 @@ interface ManualModeSettingsCardProps {
   manualModeMinNumber: number;
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
+  atendimentoAcaoEnabled: boolean;
   onManualModeEnabledChange: (value: boolean) => void;
   onManualModeMinNumberChange: (value: number) => void;
   onManualModeMinNumberPreferentialChange: (value: number) => void;
   onCallingSystemActiveChange: (value: boolean) => void;
+  onAtendimentoAcaoEnabledChange: (value: boolean) => void;
   onSettingsChange: () => void;
 }
 
@@ -36,10 +38,12 @@ export function ManualModeSettingsCard({
   manualModeMinNumber,
   manualModeMinNumberPreferential,
   callingSystemActive,
+  atendimentoAcaoEnabled,
   onManualModeEnabledChange,
   onManualModeMinNumberChange,
   onManualModeMinNumberPreferentialChange,
   onCallingSystemActiveChange,
+  onAtendimentoAcaoEnabledChange,
   onSettingsChange,
 }: ManualModeSettingsCardProps) {
   const { toast } = useToast();
@@ -233,6 +237,27 @@ export function ManualModeSettingsCard({
               onCheckedChange={onManualModeEnabledChange}
             />
           </div>
+
+          <Separator />
+
+          {/* Atendimento Ação Toggle - only visible when manual mode is enabled */}
+          {manualModeEnabled && (
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+              <div>
+                <Label htmlFor="atendimentoAcaoEnabled" className="font-medium">Atendimento Ação</Label>
+                <p className="text-sm text-muted-foreground">
+                  {atendimentoAcaoEnabled 
+                    ? 'Permite selecionar órgão na recepção e filtrar senhas por órgão no atendimento'
+                    : 'Desativado - senhas não são vinculadas a órgãos específicos'}
+                </p>
+              </div>
+              <Switch
+                id="atendimentoAcaoEnabled"
+                checked={atendimentoAcaoEnabled}
+                onCheckedChange={onAtendimentoAcaoEnabledChange}
+              />
+            </div>
+          )}
 
           <Separator />
 

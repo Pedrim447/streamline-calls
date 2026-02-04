@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
+import { useOrgans } from '@/hooks/useOrgans';
+import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -21,7 +23,8 @@ import {
   RefreshCw,
   Shield,
   ExternalLink,
-  Monitor
+  Monitor,
+  Building2
 } from 'lucide-react';
 import {
   Select,
@@ -56,6 +59,17 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
+  // Get settings and user organs
+  const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
+  const { userOrgans } = useOrgans();
+  
+  // Determine organ filter - only filter if atendimento ação is enabled and user has organs assigned
+  const organFilter = useMemo(() => {
+    if (manualModeEnabled && atendimentoAcaoEnabled && userOrgans.length > 0) {
+      return userOrgans.map(o => o.id);
+    }
+    return undefined;
+  }, [manualModeEnabled, atendimentoAcaoEnabled, userOrgans]);
 
   const { 
     tickets, 
@@ -67,6 +81,7 @@ export default function Dashboard() {
     skipTicket,
   } = useTickets({ 
     status: ['waiting', 'called', 'in_service'],
+    organIds: organFilter,
     realtime: true 
   });
 
@@ -376,6 +391,21 @@ export default function Dashboard() {
           </Card>
         ) : (
           <>
+            {/* Organ Filter Banner - only show when atendimento ação is active */}
+            {manualModeEnabled && atendimentoAcaoEnabled && (
+              <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                <Building2 className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Atendimento Ação Ativo</p>
+                  <p className="text-xs text-muted-foreground">
+                    {userOrgans.length > 0 
+                      ? `Visualizando senhas de: ${userOrgans.map(o => o.code).join(', ')}`
+                      : 'Você não está vinculado a nenhum órgão. Contate o administrador.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Stats */}
             <StatsCards 
               waitingCount={waitingTickets.length}

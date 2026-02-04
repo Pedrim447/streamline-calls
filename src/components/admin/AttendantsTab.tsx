@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Shield, User, Users } from "lucide-react";
+import { UserPlus, Shield, User, Users, Building2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -26,6 +28,14 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface ProfileWithRoles extends Profile {
   roles: AppRole[];
+  organ_ids: string[];
+}
+
+interface Organ {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
 }
 
 const DEFAULT_UNIT_ID = "a0000000-0000-0000-0000-000000000001";
@@ -46,9 +56,14 @@ const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = 
 
 export function AttendantsTab() {
   const { toast } = useToast();
+  const { profile: authProfile } = useAuth();
   const [profiles, setProfiles] = useState<ProfileWithRoles[]>([]);
+  const [organs, setOrgans] = useState<Organ[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isOrgansDialogOpen, setIsOrgansDialogOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<ProfileWithRoles | null>(null);
+  const [selectedOrgans, setSelectedOrgans] = useState<string[]>([]);
 
   // Form state
   const [formEmail, setFormEmail] = useState("");
@@ -59,6 +74,21 @@ export function AttendantsTab() {
   const [formCpf, setFormCpf] = useState("");
   const [formBirthDate, setFormBirthDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
+
+  const fetchOrgans = async () => {
+    const { data } = await supabase
+      .from('organs')
+      .select('*')
+      .eq('unit_id', unitId)
+      .eq('is_active', true)
+      .order('name');
+    
+    if (data) {
+      setOrgans(data);
+    }
+  };
 
   const fetchProfiles = async () => {
     setIsLoading(true);
@@ -79,9 +109,13 @@ export function AttendantsTab() {
       console.error("Error fetching roles:", rolesError);
     }
 
+    // Fetch organ assignments for each profile
+    const { data: attendantOrgansData } = await supabase.from("attendant_organs").select("*");
+
     const profilesWithRoles: ProfileWithRoles[] = (profilesData || []).map((profile) => ({
       ...profile,
       roles: (rolesData || []).filter((r) => r.user_id === profile.user_id).map((r) => r.role),
+      organ_ids: (attendantOrgansData || []).filter((ao) => ao.user_id === profile.user_id).map((ao) => ao.organ_id),
     }));
 
     setProfiles(profilesWithRoles);
@@ -90,7 +124,67 @@ export function AttendantsTab() {
 
   useEffect(() => {
     fetchProfiles();
-  }, []);
+    fetchOrgans();
+  }, [unitId]);
+
+  const openOrgansDialog = (profile: ProfileWithRoles) => {
+    setSelectedProfile(profile);
+    setSelectedOrgans(profile.organ_ids);
+    setIsOrgansDialogOpen(true);
+  };
+
+  const handleSaveOrgans = async () => {
+    if (!selectedProfile) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Remove all existing organ assignments
+      await supabase
+        .from('attendant_organs')
+        .delete()
+        .eq('user_id', selectedProfile.user_id);
+      
+      // Add new assignments
+      if (selectedOrgans.length > 0) {
+        const { error } = await supabase
+          .from('attendant_organs')
+          .insert(
+            selectedOrgans.map(organId => ({
+              user_id: selectedProfile.user_id,
+              organ_id: organId,
+            }))
+          );
+        
+        if (error) throw error;
+      }
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Órgãos atualizados com sucesso',
+      });
+      
+      setIsOrgansDialogOpen(false);
+      fetchProfiles();
+    } catch (error) {
+      console.error('Error saving organs:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar órgãos',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleOrgan = (organId: string) => {
+    setSelectedOrgans(prev => 
+      prev.includes(organId) 
+        ? prev.filter(id => id !== organId)
+        : [...prev, organId]
+    );
+  };
 
   // Format CPF as user types
   const formatCpf = (value: string) => {
@@ -415,11 +509,28 @@ export function AttendantsTab() {
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{profile.email}</span>
                         {(profile as any).matricula && <span>• Mat: {(profile as any).matricula}</span>}
+                        {profile.organ_ids.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {organs.filter(o => profile.organ_ids.includes(o.id)).map(o => o.code).join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {/* Only show organs button for attendants */}
+                    {primaryRole === 'attendant' && organs.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openOrgansDialog(profile)}
+                      >
+                        <Building2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
                     <Select value={primaryRole} onValueChange={(v) => handleUpdateRole(profile, v as AppRole)}>
                       <SelectTrigger className="w-36">
                         <SelectValue />
@@ -448,6 +559,58 @@ export function AttendantsTab() {
           )}
         </div>
       </CardContent>
+
+      {/* Organs Assignment Dialog */}
+      <Dialog open={isOrgansDialogOpen} onOpenChange={setIsOrgansDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Órgãos do Atendente</DialogTitle>
+            <DialogDescription>
+              Selecione os órgãos que {selectedProfile?.full_name} poderá atender
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {organs.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum órgão cadastrado. Cadastre órgãos na aba "Órgãos".
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {organs.map((organ) => (
+                  <div 
+                    key={organ.id}
+                    className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                    onClick={() => toggleOrgan(organ.id)}
+                  >
+                    <Checkbox
+                      id={`organ-${organ.id}`}
+                      checked={selectedOrgans.includes(organ.id)}
+                      onCheckedChange={() => toggleOrgan(organ.id)}
+                    />
+                    <label 
+                      htmlFor={`organ-${organ.id}`}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <span className="font-medium">{organ.code}</span>
+                      <span className="text-muted-foreground ml-2">- {organ.name}</span>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOrgansDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveOrgans} disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

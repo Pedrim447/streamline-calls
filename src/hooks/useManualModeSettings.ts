@@ -8,6 +8,7 @@ interface ManualModeSettings {
   manualModeMinNumber: number;
   manualModeMinNumberPreferential: number;
   callingSystemActive: boolean;
+  atendimentoAcaoEnabled: boolean;
   lastGeneratedNormal: number | null;
   lastGeneratedPreferential: number | null;
   isLoading: boolean;
@@ -18,6 +19,7 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
   const [manualModeMinNumber, setManualModeMinNumber] = useState(500);
   const [manualModeMinNumberPreferential, setManualModeMinNumberPreferential] = useState(0);
   const [callingSystemActive, setCallingSystemActive] = useState(false);
+  const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
   const [lastGeneratedNormal, setLastGeneratedNormal] = useState<number | null>(null);
   const [lastGeneratedPreferential, setLastGeneratedPreferential] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +33,7 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
       // Fetch settings
       const { data, error } = await supabase
         .from('settings')
-        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active')
+        .select('manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled')
         .eq('unit_id', effectiveUnitId)
         .maybeSingle();
 
@@ -42,6 +44,8 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
         setManualModeMinNumberPreferential(data.manual_mode_min_number_preferential ?? 0);
         // @ts-ignore - new columns
         setCallingSystemActive(data.calling_system_active ?? false);
+        // @ts-ignore - new columns
+        setAtendimentoAcaoEnabled(data.atendimento_acao_enabled ?? false);
       }
       
       const today = new Date().toISOString().split('T')[0];
@@ -97,12 +101,19 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
           filter: `unit_id=eq.${effectiveUnitId}`,
         },
         (payload) => {
-          const newData = payload.new as { manual_mode_enabled?: boolean; manual_mode_min_number?: number };
+          const newData = payload.new as { 
+            manual_mode_enabled?: boolean; 
+            manual_mode_min_number?: number;
+            atendimento_acao_enabled?: boolean;
+          };
           if (newData.manual_mode_enabled !== undefined) {
             setManualModeEnabled(newData.manual_mode_enabled);
           }
           if (newData.manual_mode_min_number !== undefined) {
             setManualModeMinNumber(newData.manual_mode_min_number);
+          }
+          if (newData.atendimento_acao_enabled !== undefined) {
+            setAtendimentoAcaoEnabled(newData.atendimento_acao_enabled);
           }
         }
       )
@@ -159,6 +170,7 @@ export function useManualModeSettings(unitId?: string): ManualModeSettings {
     manualModeMinNumber,
     manualModeMinNumberPreferential,
     callingSystemActive,
+    atendimentoAcaoEnabled,
     lastGeneratedNormal,
     lastGeneratedPreferential,
     isLoading,

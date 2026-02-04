@@ -11,12 +11,13 @@ type TicketType = Database['public']['Enums']['ticket_type'];
 interface UseTicketsOptions {
   unitId?: string | null;
   status?: TicketStatus[];
+  organIds?: string[];
   limit?: number;
   realtime?: boolean;
 }
 
 export function useTickets(options: UseTicketsOptions = {}) {
-  const { unitId, status, limit = 50, realtime = true } = options;
+  const { unitId, status, organIds, limit = 50, realtime = true } = options;
   const { profile } = useAuth();
   const { toast } = useToast();
   
@@ -47,6 +48,11 @@ export function useTickets(options: UseTicketsOptions = {}) {
         query = query.in('status', status);
       }
 
+      // Filter by organ IDs if provided
+      if (organIds && organIds.length > 0) {
+        query = query.in('organ_id', organIds);
+      }
+
       const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
@@ -58,7 +64,7 @@ export function useTickets(options: UseTicketsOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, limit]);
+  }, [effectiveUnitId, status, organIds, limit]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
