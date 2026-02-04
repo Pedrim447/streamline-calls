@@ -9,7 +9,6 @@ interface CreateTicketRequest {
   unit_id: string;
   ticket_type: 'normal' | 'preferential';
   client_name?: string;
-  client_cpf?: string;
   manual_ticket_number?: number;
   organ_id?: string;
 }
