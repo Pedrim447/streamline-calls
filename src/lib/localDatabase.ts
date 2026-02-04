@@ -64,8 +64,11 @@ export interface Ticket {
   service_started_at: string | null;
   completed_at: string | null;
   skip_reason: string | null;
+  cancel_reason: string | null;
   service_type: string | null;
   completion_status: string | null;
+  locked_at: string | null;
+  locked_by: string | null;
   created_at: string;
   updated_at: string;
 }
