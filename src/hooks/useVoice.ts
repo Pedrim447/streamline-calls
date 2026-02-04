@@ -266,16 +266,16 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     counterNumber: number | string, 
     options: CallTicketOptions = {}
   ) => {
-    const { withSound = true, ticketType, clientName } = options;
+    const { withSound = true, ticketType, clientName, organName } = options;
     
     if (withSound) {
       playAlertSound();
       // Small delay before voice
       setTimeout(() => {
-        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
+        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
       }, 600);
     } else {
-      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName });
+      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
     }
   }, [speak, playAlertSound]);
 
