@@ -215,8 +215,6 @@ export function AttendantsTab() {
           role: formRole,
           unit_id: DEFAULT_UNIT_ID,
           matricula: formMatricula || undefined,
-          cpf: formCpf || undefined,
-          birth_date: formBirthDate || undefined,
         },
       });
 
