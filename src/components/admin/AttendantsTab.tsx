@@ -519,7 +519,18 @@ export function AttendantsTab() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {/* Only show organs button for attendants */}
+                    {primaryRole === 'attendant' && organs.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openOrgansDialog(profile)}
+                      >
+                        <Building2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
                     <Select value={primaryRole} onValueChange={(v) => handleUpdateRole(profile, v as AppRole)}>
                       <SelectTrigger className="w-36">
                         <SelectValue />
