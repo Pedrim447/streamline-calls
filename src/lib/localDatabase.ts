@@ -526,6 +526,7 @@ export async function createCounter(unitId: string, number: number, name?: strin
     is_active: true,
     current_attendant_id: null,
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
   return add('counters', counter);
 }
