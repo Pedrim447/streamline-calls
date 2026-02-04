@@ -284,11 +284,13 @@ export function SettingsTab() {
         manualModeMinNumberPreferential={manualModeMinNumberPreferential}
         callingSystemActive={callingSystemActive}
         atendimentoAcaoEnabled={atendimentoAcaoEnabled}
+        perOrganNumbersEnabled={perOrganNumbersEnabled}
         onManualModeEnabledChange={setManualModeEnabled}
         onManualModeMinNumberChange={setManualModeMinNumber}
         onManualModeMinNumberPreferentialChange={setManualModeMinNumberPreferential}
         onCallingSystemActiveChange={setCallingSystemActive}
         onAtendimentoAcaoEnabledChange={setAtendimentoAcaoEnabled}
+        onPerOrganNumbersEnabledChange={setPerOrganNumbersEnabled}
         onSettingsChange={fetchData}
       />
 

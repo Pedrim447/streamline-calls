@@ -286,8 +286,8 @@ export function ManualModeSettingsCard({
 
           <Separator />
 
-          {/* Number Settings - Always visible */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Number Settings - Disabled when per-organ numbers are enabled */}
+          <div className={`grid gap-4 md:grid-cols-2 ${perOrganNumbersEnabled && atendimentoAcaoEnabled ? 'opacity-50' : ''}`}>
             <div className="space-y-2">
               <Label htmlFor="manualModeMinNumber">
                 Número Inicial - Normal
@@ -298,11 +298,14 @@ export function ManualModeSettingsCard({
                 min="0"
                 value={manualModeMinNumber}
                 onChange={(e) => onManualModeMinNumberChange(parseInt(e.target.value) || 0)}
+                disabled={perOrganNumbersEnabled && atendimentoAcaoEnabled}
               />
               <p className="text-xs text-muted-foreground">
-                {manualModeEnabled 
-                  ? 'Mínimo para senhas normais no modo manual'
-                  : 'Senhas normais iniciam a partir deste número'}
+                {perOrganNumbersEnabled && atendimentoAcaoEnabled
+                  ? 'Desativado - configure nas configurações de cada órgão'
+                  : manualModeEnabled 
+                    ? 'Mínimo para senhas normais no modo manual'
+                    : 'Senhas normais iniciam a partir deste número'}
               </p>
             </div>
 
@@ -316,11 +319,14 @@ export function ManualModeSettingsCard({
                 min="0"
                 value={manualModeMinNumberPreferential}
                 onChange={(e) => onManualModeMinNumberPreferentialChange(parseInt(e.target.value) || 0)}
+                disabled={perOrganNumbersEnabled && atendimentoAcaoEnabled}
               />
               <p className="text-xs text-muted-foreground">
-                {manualModeEnabled 
-                  ? 'Mínimo para senhas preferenciais no modo manual'
-                  : 'Senhas preferenciais iniciam a partir deste número'}
+                {perOrganNumbersEnabled && atendimentoAcaoEnabled
+                  ? 'Desativado - configure nas configurações de cada órgão'
+                  : manualModeEnabled 
+                    ? 'Mínimo para senhas preferenciais no modo manual'
+                    : 'Senhas preferenciais iniciam a partir deste número'}
               </p>
             </div>
           </div>

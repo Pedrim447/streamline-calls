@@ -84,13 +84,13 @@ Deno.serve(async (req) => {
     
     // Determine minimum number based on mode
     let minNumber: number;
-    if (atendimentoAcaoEnabled && organSettings) {
-      // Modo Ação: use per-organ minimums
+    if (atendimentoAcaoEnabled && perOrganNumbersEnabled && organSettings) {
+      // Modo Ação with per-organ numbers: use per-organ minimums
       minNumber = ticket_type === 'preferential' 
         ? (organSettings.min_number_preferential ?? 1)
         : (organSettings.min_number_normal ?? 1);
     } else {
-      // Standard mode: use global settings
+      // Standard mode or Ação without per-organ: use global settings
       minNumber = ticket_type === 'preferential' 
         ? (settings?.manual_mode_min_number_preferential ?? 0)
         : (settings?.manual_mode_min_number ?? 500);
