@@ -123,8 +123,6 @@ Deno.serve(async (req) => {
     // Update the profile with additional fields
     const profileUpdate: Record<string, unknown> = { unit_id };
     if (matricula) profileUpdate.matricula = matricula;
-    if (cpf) profileUpdate.cpf = cpf.replace(/\D/g, '');
-    if (birth_date) profileUpdate.birth_date = birth_date;
     if (avatar_url) profileUpdate.avatar_url = avatar_url;
 
     const { error: profileError } = await supabaseAdmin

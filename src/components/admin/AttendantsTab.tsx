@@ -378,27 +378,6 @@ export function AttendantsTab() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cpf">CPF</Label>
-                    <Input
-                      id="cpf"
-                      placeholder="000.000.000-00"
-                      value={formCpf}
-                      onChange={handleCpfChange}
-                      maxLength={14}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="birth_date">Data de Nascimento</Label>
-                    <Input
-                      id="birth_date"
-                      type="date"
-                      value={formBirthDate}
-                      onChange={(e) => setFormBirthDate(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="role">Tipo de Usuário *</Label>
                     <Select value={formRole} onValueChange={(v) => setFormRole(v as AppRole)}>
                       <SelectTrigger>
