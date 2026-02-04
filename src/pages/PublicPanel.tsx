@@ -612,6 +612,13 @@ export default function PublicPanel() {
                     <span className="text-sm text-white/60">
                       {ticket.ticket_type === 'preferential' ? 'Preferencial' : 'Atendimento'}
                     </span>
+                    {/* Show organ in history when Atendimento Ação is enabled */}
+                    {atendimentoAcaoEnabled && ticket.organ && (
+                      <span className="text-xs text-white/50 flex items-center gap-1 mt-1">
+                        <Building2 className="h-3 w-3" />
+                        {ticket.organ.code}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white/90">
