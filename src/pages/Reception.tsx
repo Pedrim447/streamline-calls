@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useManualModeSettings } from '@/hooks/useManualModeSettings';
+import { useOrgans } from '@/hooks/useOrgans';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Building2
 } from 'lucide-react';
 import {
   Dialog,
@@ -54,9 +56,13 @@ export default function Reception() {
   const [clientName, setClientName] = useState('');
   const [ticketType, setTicketType] = useState<TicketType>('normal');
   const [manualTicketNumber, setManualTicketNumber] = useState('');
+  const [selectedOrganId, setSelectedOrganId] = useState<string>('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, atendimentoAcaoEnabled, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
+  
+  // Get organs
+  const { organs, isLoading: organsLoading } = useOrgans();
 
   // Redirect if not authenticated
   useEffect(() => {
