@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
+import { useOrgans } from '@/hooks/useOrgans';
+import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -21,7 +23,8 @@ import {
   RefreshCw,
   Shield,
   ExternalLink,
-  Monitor
+  Monitor,
+  Building2
 } from 'lucide-react';
 import {
   Select,
@@ -56,6 +59,17 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
+  // Get settings and user organs
+  const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
+  const { userOrgans } = useOrgans();
+  
+  // Determine organ filter - only filter if atendimento ação is enabled and user has organs assigned
+  const organFilter = useMemo(() => {
+    if (manualModeEnabled && atendimentoAcaoEnabled && userOrgans.length > 0) {
+      return userOrgans.map(o => o.id);
+    }
+    return undefined;
+  }, [manualModeEnabled, atendimentoAcaoEnabled, userOrgans]);
 
   const { 
     tickets, 
@@ -67,6 +81,7 @@ export default function Dashboard() {
     skipTicket,
   } = useTickets({ 
     status: ['waiting', 'called', 'in_service'],
+    organIds: organFilter,
     realtime: true 
   });
 
