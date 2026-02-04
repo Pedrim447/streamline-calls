@@ -73,6 +73,8 @@ export function SettingsTab() {
       setCallingSystemActive(settingsRes.data.calling_system_active ?? false);
       // @ts-ignore - new columns
       setAtendimentoAcaoEnabled(settingsRes.data.atendimento_acao_enabled ?? false);
+      // @ts-ignore - new columns
+      setPerOrganNumbersEnabled(settingsRes.data.per_organ_numbers_enabled ?? false);
     }
 
     setIsLoading(false);
