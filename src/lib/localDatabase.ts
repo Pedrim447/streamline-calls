@@ -653,8 +653,11 @@ export async function createTicket(data: {
     service_started_at: null,
     completed_at: null,
     skip_reason: null,
+    cancel_reason: null,
     service_type: null,
     completion_status: null,
+    locked_at: null,
+    locked_by: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
