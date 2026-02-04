@@ -150,18 +150,21 @@ export default function Reception() {
       return;
     }
 
-    const trimmedName = clientName.trim();
-    
-    // Validate name - must have at least 2 words (first and last name)
-    const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
-    if (nameParts.length < 2) {
-      toast.error('Por favor, informe o nome completo do cliente (nome e sobrenome)');
-      return;
-    }
-    
-    if (trimmedName.length < 5) {
-      toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
-      return;
+    // Only validate client name when NOT in Atendimento Ação mode
+    if (!atendimentoAcaoEnabled) {
+      const trimmedName = clientName.trim();
+      
+      // Validate name - must have at least 2 words (first and last name)
+      const nameParts = trimmedName.split(/\s+/).filter(part => part.length > 0);
+      if (nameParts.length < 2) {
+        toast.error('Por favor, informe o nome completo do cliente (nome e sobrenome)');
+        return;
+      }
+      
+      if (trimmedName.length < 5) {
+        toast.error('O nome do cliente deve ter pelo menos 5 caracteres');
+        return;
+      }
     }
 
     // Validate manual ticket number if manual mode is enabled
@@ -201,8 +204,12 @@ export default function Reception() {
       const requestBody: Record<string, unknown> = {
         unit_id: unitId,
         ticket_type: ticketType,
-        client_name: clientName.trim(),
       };
+      
+      // Only include client name if NOT in Atendimento Ação mode
+      if (!atendimentoAcaoEnabled && clientName.trim()) {
+        requestBody.client_name = clientName.trim();
+      }
       
       // Add manual ticket number if in manual mode
       if (manualModeEnabled) {
@@ -460,16 +467,19 @@ export default function Reception() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
-              <Input
-                id="clientName"
-                placeholder="Digite o nome completo"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                disabled={!callingSystemActive}
-              />
-            </div>
+            {/* Client Name - only show when NOT in Atendimento Ação mode */}
+            {!atendimentoAcaoEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Nome Completo do Cliente *</Label>
+                <Input
+                  id="clientName"
+                  placeholder="Digite o nome completo"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  disabled={!callingSystemActive}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="ticketType">Tipo de Atendimento</Label>
