@@ -5,7 +5,7 @@ const DB_NAME = 'CallFlowDB';
 const DB_VERSION = 1;
 
 // Types
-export type AppRole = 'admin' | 'attendant' | 'reception' | 'painel';
+export type AppRole = 'admin' | 'attendant' | 'reception' | 'recepcao' | 'painel';
 export type TicketStatus = 'waiting' | 'called' | 'in_service' | 'completed' | 'cancelled' | 'skipped';
 export type TicketType = 'normal' | 'preferential';
 

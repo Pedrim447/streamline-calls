@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import * as localDb from '@/lib/localDatabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
 
-type Ticket = Database['public']['Tables']['tickets']['Row'];
-type TicketStatus = Database['public']['Enums']['ticket_status'];
-type TicketType = Database['public']['Enums']['ticket_type'];
+type Ticket = localDb.Ticket;
+type TicketStatus = localDb.TicketStatus;
+type TicketType = localDb.TicketType;
 
 interface UseTicketsOptions {
   unitId?: string | null;
@@ -23,9 +22,8 @@ export function useTickets(options: UseTicketsOptions = {}) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const effectiveUnitId = unitId ?? profile?.unit_id;
+  const effectiveUnitId = unitId ?? profile?.unit_id ?? 'a0000000-0000-0000-0000-000000000001';
 
   const fetchTickets = useCallback(async () => {
     if (!effectiveUnitId) {
@@ -35,22 +33,8 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
 
     try {
-      let query = supabase
-        .from('tickets')
-        .select('*')
-        .eq('unit_id', effectiveUnitId)
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(limit);
-
-      if (status && status.length > 0) {
-        query = query.in('status', status);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-      setTickets(data || []);
+      const data = await localDb.getTickets(effectiveUnitId, { status, limit });
+      setTickets(data);
       setError(null);
     } catch (err) {
       console.error('Error fetching tickets:', err);
@@ -60,110 +44,43 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
   }, [effectiveUnitId, status, limit]);
 
-  // Optimistic update helper
-  const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
-    setTickets(prev => prev.map(t => 
-      t.id === ticketId ? { ...t, ...updates } : t
-    ));
-  }, []);
-
-  // Broadcast helper for instant updates across clients
-  const broadcastUpdate = useCallback((event: string, payload: any) => {
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event,
-        payload,
-      });
-    }
-  }, []);
-
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
-  // Realtime subscription with broadcast support
+  // Subscribe to local events for realtime-like updates
   useEffect(() => {
-    if (!realtime || !effectiveUnitId) return;
+    if (!realtime) return;
 
-    const channel = supabase
-      .channel(`tickets-${effectiveUnitId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets',
-          filter: `unit_id=eq.${effectiveUnitId}`,
-        },
-        (payload) => {
-          console.log('[Realtime] DB change:', payload.eventType);
-          if (payload.eventType === 'INSERT') {
-            setTickets(prev => {
-              const newTicket = payload.new as Ticket;
-              // Check if already exists (optimistic update)
-              if (prev.some(t => t.id === newTicket.id)) return prev;
-              // Check if matches status filter
-              if (status && status.length > 0 && !status.includes(newTicket.status)) {
-                return prev;
-              }
-              return [...prev, newTicket].sort((a, b) => {
-                if (b.priority !== a.priority) return b.priority - a.priority;
-                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-              });
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setTickets(prev => {
-              const updatedTicket = payload.new as Ticket;
-              // If status filter exists and ticket no longer matches, remove it
-              if (status && status.length > 0 && !status.includes(updatedTicket.status)) {
-                return prev.filter(t => t.id !== updatedTicket.id);
-              }
-              // Otherwise update it
-              return prev.map(t => t.id === updatedTicket.id ? updatedTicket : t);
-            });
-          } else if (payload.eventType === 'DELETE') {
-            setTickets(prev => prev.filter(t => t.id !== (payload.old as Ticket).id));
-          }
-        }
-      )
-      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
-        console.log('[Realtime] Broadcast ticket_called:', payload);
-        // Instant update from broadcast (faster than DB change propagation)
-        if (payload?.ticket) {
-          setTickets(prev => prev.map(t => 
-            t.id === payload.ticket.id ? { ...t, ...payload.ticket } : t
-          ));
-        }
-      })
-      .subscribe((status) => {
-        console.log('[Realtime] Subscription status:', status);
-      });
+    const unsubscribeCreated = localDb.subscribeToEvent('ticket_created', () => {
+      fetchTickets();
+    });
 
-    channelRef.current = channel;
+    const unsubscribeUpdated = localDb.subscribeToEvent('ticket_updated', () => {
+      fetchTickets();
+    });
 
-    // Listen for system reset broadcast
-    const resetChannel = supabase
-      .channel(`system-reset-tickets-${effectiveUnitId}`)
-      .on('broadcast', { event: 'system_reset' }, () => {
-        console.log('[Realtime] System reset broadcast received');
-        // Clear local tickets and refetch
-        setTickets([]);
-        fetchTickets();
-      })
-      .subscribe();
+    const unsubscribeCalled = localDb.subscribeToEvent('ticket_called', () => {
+      fetchTickets();
+    });
+
+    const unsubscribeChange = localDb.subscribeToEvent('tickets_change', () => {
+      fetchTickets();
+    });
+
+    const unsubscribeReset = localDb.subscribeToEvent('system_reset', () => {
+      setTickets([]);
+      fetchTickets();
+    });
 
     return () => {
-      console.log('[Realtime] Cleaning up channel');
-      supabase.removeChannel(channel);
-      supabase.removeChannel(resetChannel);
-      channelRef.current = null;
+      unsubscribeCreated();
+      unsubscribeUpdated();
+      unsubscribeCalled();
+      unsubscribeChange();
+      unsubscribeReset();
     };
-  }, [realtime, effectiveUnitId, status, fetchTickets]);
+  }, [realtime, fetchTickets]);
 
   const callNextTicket = async (counterId: string) => {
     if (!effectiveUnitId) {
@@ -175,31 +92,36 @@ export function useTickets(options: UseTicketsOptions = {}) {
       return null;
     }
 
-    try {
-      const { data, error } = await supabase.functions.invoke('call-ticket', {
-        body: {
-          unit_id: effectiveUnitId,
-          counter_id: counterId,
-          action: 'call_next',
-        },
+    const { user } = useAuth();
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Usuário não autenticado',
+        variant: 'destructive',
       });
+      return null;
+    }
 
-      if (error) throw error;
-      
-      // Check if queue is empty
-      if (data.queue_empty || data.no_tickets) {
+    try {
+      const { ticket, error, queue_empty } = await localDb.callNextTicket(
+        effectiveUnitId, 
+        counterId, 
+        user.id
+      );
+
+      if (queue_empty) {
         toast({
           title: 'Fila Vazia',
-          description: data.error || 'Não há senhas na fila para chamar. Aguarde a recepção entregar novas senhas.',
+          description: 'Não há senhas na fila para chamar.',
           variant: 'destructive',
         });
         return null;
       }
-      
-      if (data.error) {
+
+      if (error) {
         toast({
           title: 'Aviso',
-          description: data.error,
+          description: error,
           variant: 'destructive',
         });
         return null;
@@ -207,10 +129,10 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
       toast({
         title: 'Senha Chamada',
-        description: `Senha ${data.ticket.display_code} chamada com sucesso`,
+        description: `Senha ${ticket!.display_code} chamada com sucesso`,
       });
 
-      return data.ticket as Ticket;
+      return ticket;
     } catch (err) {
       console.error('Error calling next ticket:', err);
       toast({
@@ -224,21 +146,23 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
   const repeatCall = async (ticketId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('call-ticket', {
-        body: {
-          ticket_id: ticketId,
-          action: 'repeat',
-        },
-      });
+      const { ticket, error } = await localDb.repeatCall(ticketId);
 
-      if (error) throw error;
-      
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: error,
+          variant: 'destructive',
+        });
+        return null;
+      }
+
       toast({
         title: 'Chamada Repetida',
-        description: `Senha ${data.ticket.display_code} chamada novamente`,
+        description: `Senha ${ticket!.display_code} chamada novamente`,
       });
 
-      return data.ticket as Ticket;
+      return ticket;
     } catch (err) {
       console.error('Error repeating call:', err);
       toast({
@@ -252,16 +176,11 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
   const startService = async (ticketId: string) => {
     try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({
-          status: 'in_service' as TicketStatus,
-          service_started_at: new Date().toISOString(),
-        })
-        .eq('id', ticketId);
+      await localDb.updateTicket(ticketId, {
+        status: 'in_service',
+        service_started_at: new Date().toISOString(),
+      });
 
-      if (error) throw error;
-      
       toast({
         title: 'Atendimento Iniciado',
         description: 'O atendimento foi iniciado',
@@ -278,18 +197,13 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
   const completeService = async (ticketId: string, serviceType?: string, completionStatus?: string) => {
     try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({
-          status: 'completed' as TicketStatus,
-          completed_at: new Date().toISOString(),
-          service_type: serviceType || null,
-          completion_status: completionStatus || null,
-        })
-        .eq('id', ticketId);
+      await localDb.updateTicket(ticketId, {
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        service_type: serviceType || null,
+        completion_status: completionStatus || null,
+      });
 
-      if (error) throw error;
-      
       toast({
         title: 'Atendimento Finalizado',
         description: 'O atendimento foi concluído',
@@ -306,22 +220,23 @@ export function useTickets(options: UseTicketsOptions = {}) {
 
   const skipTicket = async (ticketId: string, reason: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('call-ticket', {
-        body: {
-          ticket_id: ticketId,
-          action: 'skip',
-          skip_reason: reason,
-        },
-      });
+      const { ticket, error } = await localDb.skipTicket(ticketId, reason);
 
-      if (error) throw error;
-      
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: error,
+          variant: 'destructive',
+        });
+        return null;
+      }
+
       toast({
         title: 'Senha Pulada',
-        description: `Senha ${data.ticket.display_code} foi pulada`,
+        description: `Senha ${ticket!.display_code} foi pulada`,
       });
 
-      return data.ticket as Ticket;
+      return ticket;
     } catch (err) {
       console.error('Error skipping ticket:', err);
       toast({
@@ -344,21 +259,26 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-ticket', {
-        body: {
-          unit_id: effectiveUnitId,
-          ticket_type: type,
-        },
+      const { ticket, error } = await localDb.createTicket({
+        unit_id: effectiveUnitId,
+        ticket_type: type,
       });
 
-      if (error) throw error;
-      
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: error,
+          variant: 'destructive',
+        });
+        return null;
+      }
+
       toast({
         title: 'Senha Gerada',
-        description: `Senha ${data.ticket.display_code} criada`,
+        description: `Senha ${ticket!.display_code} criada`,
       });
 
-      return data.ticket as Ticket;
+      return ticket;
     } catch (err) {
       console.error('Error creating ticket:', err);
       toast({
