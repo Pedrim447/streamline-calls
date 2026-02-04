@@ -260,6 +260,9 @@ export function ManualModeSettingsCard({
           )}
 
           <Separator />
+
+          {/* Number Settings - Always visible */}
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="manualModeMinNumber">
                 Número Inicial - Normal
