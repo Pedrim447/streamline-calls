@@ -17,7 +17,7 @@ interface UseTicketsOptions {
 }
 
 export function useTickets(options: UseTicketsOptions = {}) {
-  const { unitId, status, limit = 50, realtime = true } = options;
+  const { unitId, status, organIds, limit = 50, realtime = true } = options;
   const { profile } = useAuth();
   const { toast } = useToast();
   
