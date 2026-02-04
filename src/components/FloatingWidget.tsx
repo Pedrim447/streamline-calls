@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useVoice } from '@/hooks/useVoice';
-import * as localDb from '@/lib/localDatabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -29,9 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { Database } from '@/integrations/supabase/types';
 
-type Counter = localDb.Counter;
-type Ticket = localDb.Ticket;
+type Counter = Database['public']['Tables']['counters']['Row'];
+type Ticket = Database['public']['Tables']['tickets']['Row'];
 
 interface FloatingWidgetProps {
   onClose?: () => void;
@@ -71,7 +72,12 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     const fetchCounters = async () => {
       if (!profile?.unit_id) return;
 
-      const data = await localDb.getCounters(profile.unit_id);
+      const { data } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('unit_id', profile.unit_id)
+        .eq('is_active', true)
+        .order('number', { ascending: true });
 
       if (data) {
         setAvailableCounters(data);
@@ -137,9 +143,12 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
     if (!selectedCounter) return;
 
     // Assign counter to user
-    const updatedCounter = await localDb.updateCounter(counterId, { 
-      current_attendant_id: user?.id || null 
-    });
+    const { data: updatedCounter } = await supabase
+      .from('counters')
+      .update({ current_attendant_id: user?.id })
+      .eq('id', counterId)
+      .select()
+      .single();
 
     if (updatedCounter) {
       setCounter(updatedCounter);
@@ -321,15 +330,15 @@ export function FloatingWidget({ onClose, defaultExpanded = true }: FloatingWidg
                 <div 
                   className={`inline-block px-4 py-2 rounded-lg ${
                     currentTicket.ticket_type === 'preferential'
-                      ? 'bg-amber-500/20 border border-amber-500'
-                      : 'bg-emerald-500/20 border border-emerald-500'
+                      ? 'bg-ticket-preferential/20 border border-ticket-preferential'
+                      : 'bg-ticket-normal/20 border border-ticket-normal'
                   }`}
                 >
                   <span 
                     className={`text-2xl font-bold ${
                       currentTicket.ticket_type === 'preferential'
-                        ? 'text-amber-500'
-                        : 'text-emerald-500'
+                        ? 'text-ticket-preferential'
+                        : 'text-ticket-normal'
                     }`}
                   >
                     {currentTicket.display_code}

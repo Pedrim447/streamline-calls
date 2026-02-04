@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useManualModeSettings } from '@/hooks/useManualModeSettings';
-import * as localDb from '@/lib/localDatabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,20 +34,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
-type TicketType = localDb.TicketType;
-type TicketRow = localDb.Ticket;
+type Ticket = Database['public']['Tables']['tickets']['Row'];
+type TicketType = Database['public']['Enums']['ticket_type'];
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export default function Reception() {
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
-  const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showTicketDialog, setShowTicketDialog] = useState(false);
-  const [createdTicket, setCreatedTicket] = useState<TicketRow | null>(null);
+  const [createdTicket, setCreatedTicket] = useState<Ticket | null>(null);
   
   // Form state
   const [clientName, setClientName] = useState('');
@@ -55,7 +56,7 @@ export default function Reception() {
   const [manualTicketNumber, setManualTicketNumber] = useState('');
   
   // Get manual mode settings
-  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive } = useManualModeSettings(profile?.unit_id);
+  const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, lastGeneratedNumber } = useManualModeSettings(profile?.unit_id);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -72,36 +73,66 @@ export default function Reception() {
       const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
       const today = new Date().toISOString().split('T')[0];
       
-      const allTickets = await localDb.getTickets(unitId);
-      const todayTickets = allTickets
-        .filter(t => t.created_at.startsWith(today))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      setTickets(todayTickets);
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('unit_id', unitId)
+        .gte('created_at', `${today}T00:00:00`)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setTickets(data);
+      }
       setIsLoading(false);
     };
 
     fetchTickets();
 
-    // Subscribe to ticket changes
-    const unsubscribe = localDb.subscribeToEvent('ticket_created', () => {
-      fetchTickets();
-    });
+    // Subscribe to realtime updates with broadcast support
+    const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+    const channel = supabase
+      .channel(`reception-${unitId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+          filter: `unit_id=eq.${unitId}`,
+        },
+        () => {
+          console.log('[Reception] Realtime ticket change');
+          fetchTickets();
+        }
+      )
+      .on('broadcast', { event: 'ticket_called' }, () => {
+        console.log('[Reception] Broadcast ticket_called received');
+        fetchTickets();
+      })
+      .subscribe((status) => {
+        console.log('[Reception] Subscription status:', status);
+      });
 
-    const unsubscribeUpdate = localDb.subscribeToEvent('ticket_updated', () => {
-      fetchTickets();
-    });
-
-    const unsubscribeReset = localDb.subscribeToEvent('system_reset', () => {
-      setTickets([]);
-      fetchTickets();
-      toast.info('Sistema resetado pelo administrador');
-    });
+    // Listen for system reset broadcast - use fixed DEFAULT_UNIT_ID to match admin broadcast
+    const resetChannel = supabase
+      .channel(`system-reset-${DEFAULT_UNIT_ID}`)
+      .on('broadcast', { event: 'system_reset' }, () => {
+        console.log('[Reception] System reset broadcast received - clearing tickets');
+        setTickets([]);
+        fetchTickets();
+        toast.info('Sistema resetado pelo administrador');
+      })
+      .subscribe((status) => {
+        console.log('[Reception] Reset channel status:', status);
+      });
 
     return () => {
-      unsubscribe();
-      unsubscribeUpdate();
-      unsubscribeReset();
+      supabase.removeChannel(channel);
+      supabase.removeChannel(resetChannel);
     };
   }, [profile?.unit_id, user?.id]);
 
@@ -145,6 +176,11 @@ export default function Reception() {
         toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
+      
+      if (lastGeneratedNumber !== null && ticketNum <= lastGeneratedNumber) {
+        toast.error(`O número da senha deve ser maior que ${lastGeneratedNumber} (última senha gerada)`);
+        return;
+      }
     }
 
     setIsCreating(true);
@@ -152,21 +188,32 @@ export default function Reception() {
     try {
       const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
       
-      // Create ticket using local database
-      const { ticket, error } = await localDb.createTicket({
+      // Build request body
+      const requestBody: Record<string, unknown> = {
         unit_id: unitId,
         ticket_type: ticketType,
         client_name: clientName.trim(),
-        manual_ticket_number: manualModeEnabled ? parseInt(manualTicketNumber, 10) : undefined,
+      };
+      
+      // Add manual ticket number if in manual mode
+      if (manualModeEnabled) {
+        requestBody.manual_ticket_number = parseInt(manualTicketNumber, 10);
+      }
+      
+      // Call the edge function to create a ticket
+      const { data, error } = await supabase.functions.invoke('create-ticket', {
+        body: requestBody,
       });
 
-      if (error) {
-        toast.error(error);
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
         return;
       }
 
-      if (ticket) {
-        setCreatedTicket(ticket);
+      if (data?.ticket) {
+        setCreatedTicket(data.ticket);
         setShowTicketDialog(true);
         setClientName('');
         setTicketType('normal');
@@ -389,7 +436,7 @@ export default function Reception() {
                 <div className="text-sm">
                   <p className="font-medium">Modo Manual Ativo</p>
                   <p className="text-amber-600 dark:text-amber-500">
-                    Normal: mín. {manualModeMinNumber} | Preferencial: mín. {manualModeMinNumberPreferential}
+                    Normal: mín. {manualModeMinNumber} | Preferencial: mín. {manualModeMinNumberPreferential} | Última gerada: {lastGeneratedNumber ?? 'Nenhuma'}
                   </p>
                 </div>
               </div>
@@ -430,14 +477,20 @@ export default function Reception() {
                 <Input
                   id="ticketNumber"
                   type="number"
-                  placeholder={`Mínimo: ${ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}`}
+                  placeholder={`Mínimo: ${Math.max(
+                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
+                    (lastGeneratedNumber ?? 0) + 1
+                  )}`}
                   value={manualTicketNumber}
                   onChange={(e) => setManualTicketNumber(e.target.value)}
-                  min={ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
+                  min={Math.max(
+                    ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber, 
+                    (lastGeneratedNumber ?? 0) + 1
+                  )}
                   disabled={!callingSystemActive}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Número mínimo permitido: {ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
+                  O próximo número deve ser maior que {lastGeneratedNumber ?? (ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber) - 1}
                 </p>
               </div>
             )}
@@ -540,6 +593,8 @@ export default function Reception() {
           
           {createdTicket && (
             <>
+
+
               {/* Visual display */}
               <div className="text-center space-y-4 py-4">
                 <Badge 

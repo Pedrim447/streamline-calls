@@ -15,7 +15,10 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { Ticket, Counter } from '@/lib/localDatabase';
+import type { Database } from '@/integrations/supabase/types';
+
+type Ticket = Database['public']['Tables']['tickets']['Row'];
+type Counter = Database['public']['Tables']['counters']['Row'];
 
 interface CurrentTicketProps {
   ticket: Ticket | null;

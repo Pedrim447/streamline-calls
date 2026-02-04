@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTickets } from '@/hooks/useTickets';
 import { useCallCooldown } from '@/hooks/useCallCooldown';
-import * as localDb from '@/lib/localDatabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,14 +23,23 @@ import {
   ExternalLink,
   Monitor
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { CompleteServiceDialog } from '@/components/dashboard/CompleteServiceDialog';
 
-type Counter = localDb.Counter;
-type Ticket = localDb.Ticket;
+import type { Database } from '@/integrations/supabase/types';
+
+type Counter = Database['public']['Tables']['counters']['Row'];
+type Ticket = Database['public']['Tables']['tickets']['Row'];
 
 const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
@@ -47,6 +56,7 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
 
+
   const { 
     tickets, 
     isLoading: ticketsLoading,
@@ -60,8 +70,7 @@ export default function Dashboard() {
     realtime: true 
   });
 
-  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 });
-
+  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -69,7 +78,7 @@ export default function Dashboard() {
     }
   }, [user, authLoading, navigate]);
 
-  // Fetch available counters
+  // Fetch available counters and check if user already has one assigned
   useEffect(() => {
     const fetchCounters = async () => {
       if (!user?.id) return;
@@ -77,7 +86,12 @@ export default function Dashboard() {
       const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
 
       // Check if user already has a counter assigned
-      const myCounter = await localDb.getCounterByAttendant(user.id);
+      const { data: myCounter } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('current_attendant_id', user.id)
+        .eq('is_active', true)
+        .single();
 
       if (myCounter) {
         setCounter(myCounter);
@@ -86,7 +100,12 @@ export default function Dashboard() {
       }
 
       // Fetch all active counters for this unit
-      const counters = await localDb.getCounters(unitId);
+      const { data: counters } = await supabase
+        .from('counters')
+        .select('*')
+        .eq('unit_id', unitId)
+        .eq('is_active', true)
+        .order('number', { ascending: true });
 
       if (counters) {
         // Filter to only available counters (no attendant assigned)
@@ -104,9 +123,12 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     // Assign counter to this user
-    const updatedCounter = await localDb.updateCounter(counterId, { 
-      current_attendant_id: user.id 
-    });
+    const { data: updatedCounter, error } = await supabase
+      .from('counters')
+      .update({ current_attendant_id: user.id })
+      .eq('id', counterId)
+      .select()
+      .single();
 
     if (updatedCounter) {
       setCounter(updatedCounter);
@@ -120,18 +142,26 @@ export default function Dashboard() {
     if (!counter) return;
     setIsProcessing(true);
 
-    await localDb.updateCounter(counter.id, { current_attendant_id: null });
+    await supabase
+      .from('counters')
+      .update({ current_attendant_id: null })
+      .eq('id', counter.id);
 
     setCounter(null);
     setIsSelectingCounter(true);
     
     // Refetch available counters
     const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
-    const counters = await localDb.getCounters(unitId);
+    const { data: counters } = await supabase
+      .from('counters')
+      .select('*')
+      .eq('unit_id', unitId)
+      .eq('is_active', true)
+      .is('current_attendant_id', null)
+      .order('number', { ascending: true });
 
     if (counters) {
-      const available = counters.filter(c => !c.current_attendant_id);
-      setAvailableCounters(available);
+      setAvailableCounters(counters);
     }
 
     setIsProcessing(false);
@@ -146,33 +176,15 @@ export default function Dashboard() {
   }, [tickets, user?.id]);
 
   const handleCallNext = async () => {
-    if (!counter || !user) return;
+    if (!counter) return;
     if (cooldownRemaining > 0) return;
     
+    // Start processing immediately for instant feedback
     setIsProcessing(true);
-    startCooldown();
+    startCooldown(); // Start cooldown immediately for faster UX
     
-    const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
-    const { ticket, error, queue_empty } = await localDb.callNextTicket(unitId, counter.id, user.id);
-    
-    if (queue_empty) {
-      toast({
-        title: 'Fila Vazia',
-        description: 'Não há senhas na fila para chamar.',
-        variant: 'destructive',
-      });
-    } else if (error) {
-      toast({
-        title: 'Erro',
-        description: error,
-        variant: 'destructive',
-      });
-    } else if (ticket) {
-      toast({
-        title: 'Senha Chamada',
-        description: `Senha ${ticket.display_code} chamada com sucesso`,
-      });
-    }
+    await callNextTicket(counter.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
@@ -182,9 +194,10 @@ export default function Dashboard() {
     if (cooldownRemaining > 0) return;
     
     setIsProcessing(true);
-    startCooldown();
+    startCooldown(); // Start cooldown immediately
     
     await repeatCall(currentTicket.id);
+    // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
   };
@@ -224,10 +237,14 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
+
   const handleLogout = async () => {
     // Release the counter before logging out
     if (counter) {
-      await localDb.updateCounter(counter.id, { current_attendant_id: null });
+      await supabase
+        .from('counters')
+        .update({ current_attendant_id: null })
+        .eq('id', counter.id);
     }
     
     await signOut();
@@ -313,6 +330,7 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {isSelectingCounter ? (
@@ -416,6 +434,7 @@ export default function Dashboard() {
                     {cooldownRemaining > 0 ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
+
                   {currentTicket && (
                     <div className="grid grid-cols-2 gap-3">
                       <Button 
@@ -483,13 +502,14 @@ export default function Dashboard() {
       />
 
       {/* Complete Service Dialog */}
-      <CompleteServiceDialog 
+      <CompleteServiceDialog
         open={isCompleteDialogOpen}
         onOpenChange={setIsCompleteDialogOpen}
         onConfirm={handleCompleteService}
         ticketCode={currentTicket?.display_code}
         isProcessing={isProcessing}
       />
+
     </div>
   );
 }

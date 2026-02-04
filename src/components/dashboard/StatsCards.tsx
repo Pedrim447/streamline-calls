@@ -1,6 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, Clock, Ticket as TicketIcon, CheckCircle } from 'lucide-react';
-import type { Ticket } from '@/lib/localDatabase';
+import type { Database } from '@/integrations/supabase/types';
+
+type Ticket = Database['public']['Tables']['tickets']['Row'];
 
 interface StatsCardsProps {
   waitingCount: number;
