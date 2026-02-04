@@ -507,7 +507,40 @@ export default function Reception() {
               </div>
             )}
 
-            <Button 
+            {/* Organ Selector - only show when atendimento ação is enabled */}
+            {manualModeEnabled && atendimentoAcaoEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="organSelect">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Órgão de Atendimento *
+                  </span>
+                </Label>
+                <Select
+                  value={selectedOrganId}
+                  onValueChange={setSelectedOrganId}
+                  disabled={!callingSystemActive || organsLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o órgão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organs.map((organ) => (
+                      <SelectItem key={organ.id} value={organ.id}>
+                        {organ.code} - {organ.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {organs.length === 0 && !organsLoading && (
+                  <p className="text-xs text-destructive">
+                    Nenhum órgão cadastrado. Peça ao administrador para cadastrar.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Button
               size="lg" 
               className="w-full"
               onClick={handleCreateTicket}
