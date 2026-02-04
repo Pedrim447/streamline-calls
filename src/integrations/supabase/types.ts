@@ -280,7 +280,6 @@ export type Database = {
           attendant_id: string | null
           called_at: string | null
           cancel_reason: string | null
-          client_cpf: string | null
           client_name: string | null
           completed_at: string | null
           completion_status: string | null
@@ -305,7 +304,6 @@ export type Database = {
           attendant_id?: string | null
           called_at?: string | null
           cancel_reason?: string | null
-          client_cpf?: string | null
           client_name?: string | null
           completed_at?: string | null
           completion_status?: string | null
@@ -330,7 +328,6 @@ export type Database = {
           attendant_id?: string | null
           called_at?: string | null
           cancel_reason?: string | null
-          client_cpf?: string | null
           client_name?: string | null
           completed_at?: string | null
           completion_status?: string | null
