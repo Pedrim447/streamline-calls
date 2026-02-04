@@ -283,14 +283,14 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
   const repeatCallSoft = useCallback((
     ticketCode: string, 
     counterNumber: number | string,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null } = {}
+    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
   ) => {
-    const { ticketType, clientName } = options;
+    const { ticketType, clientName, organName } = options;
     
     playSoftChime();
     // Small delay before soft voice
     setTimeout(() => {
-      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName });
+      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName, organName });
     }, 500);
   }, [speak, playSoftChime]);
 
