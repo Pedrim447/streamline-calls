@@ -485,12 +485,17 @@ export default function PublicPanel() {
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-4 bg-black/30">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+          <div className={`w-3 h-3 rounded-full ${realtimeStatus === 'SUBSCRIBED' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
           <span className="text-lg font-medium text-white/80">Sistema de Senhas</span>
           {soundEnabled && (
             <Badge variant="outline" className="text-green-400 border-green-400/50">
               <Volume2 className="w-3 h-3 mr-1" />
               Som Ativo
+            </Badge>
+          )}
+          {realtimeStatus !== 'SUBSCRIBED' && (
+            <Badge variant="outline" className="text-amber-400 border-amber-400/50 text-xs">
+              Reconectando...
             </Badge>
           )}
         </div>
