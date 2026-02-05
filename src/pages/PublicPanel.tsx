@@ -32,6 +32,7 @@ export default function PublicPanel() {
   const [atendimentoAcaoEnabled, setAtendimentoAcaoEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<string>('disconnected');
 
   const countersRef = useRef<Record<string, Counter>>({});
   const organsRef = useRef<Record<string, Organ>>({});
@@ -298,50 +299,74 @@ export default function PublicPanel() {
     if (!user || !isPainelUser || !unitId) return;
 
     console.log('[PublicPanel] Setting up realtime subscription for unit:', unitId);
+    let retryCount = 0;
+    const maxRetries = 5;
+    let retryTimeout: NodeJS.Timeout | null = null;
     
-    const channel = supabase
-      .channel(`panel-tickets-${unitId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets',
-          filter: `unit_id=eq.${unitId}`,
-        },
-        (payload) => {
-          console.log('[PublicPanel] Ticket change:', payload.eventType, payload);
-          
-          if (payload.eventType === 'DELETE') {
-            console.log('[PublicPanel] Ticket deleted');
-            return;
-          }
-          
-          const updatedTicket = payload.new as Ticket;
-          
-          // Check if this ticket has been called (has called_at and is called/in_service)
-          if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
-            const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
+    const setupChannel = () => {
+      const channel = supabase
+        .channel(`panel-tickets-${unitId}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tickets',
+            filter: `unit_id=eq.${unitId}`,
+          },
+          (payload) => {
+            console.log('[PublicPanel] Ticket change:', payload.eventType, payload);
             
-            // Trigger voice if:
-            // 1. This ticket wasn't tracked before (new call)
-            // 2. OR called_at timestamp changed (repeat call)
-            const isNewCall = !previousCalledAt;
-            const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
+            if (payload.eventType === 'DELETE') {
+              console.log('[PublicPanel] Ticket deleted');
+              return;
+            }
             
-            // Update ref with new called_at
-            lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
+            const updatedTicket = payload.new as Ticket;
             
-            if (isNewCall || isRepeatCall) {
-              console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
-              handleNewCall(updatedTicket, isRepeatCall);
+            // Check if this ticket has been called (has called_at and is called/in_service)
+            if ((updatedTicket.status === 'called' || updatedTicket.status === 'in_service') && updatedTicket.called_at) {
+              const previousCalledAt = lastCalledAtRef.current[updatedTicket.id];
+              
+              // Trigger voice if:
+              // 1. This ticket wasn't tracked before (new call)
+              // 2. OR called_at timestamp changed (repeat call)
+              const isNewCall = !previousCalledAt;
+              const isRepeatCall = previousCalledAt && previousCalledAt !== updatedTicket.called_at;
+              
+              // Update ref with new called_at
+              lastCalledAtRef.current[updatedTicket.id] = updatedTicket.called_at;
+              
+              if (isNewCall || isRepeatCall) {
+                console.log('[PublicPanel] Triggering call - isNew:', isNewCall, 'isRepeat:', isRepeatCall);
+                handleNewCall(updatedTicket, isRepeatCall);
+              }
             }
           }
-        }
-      )
-      .subscribe((status) => {
-        console.log('[PublicPanel] Realtime status:', status);
-      });
+        )
+        .subscribe((status, err) => {
+          console.log('[PublicPanel] Realtime status:', status, err);
+          setRealtimeStatus(status);
+          
+          if (status === 'SUBSCRIBED') {
+            retryCount = 0; // Reset retry count on successful connection
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            // Try to reconnect
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`[PublicPanel] Connection lost, retrying in ${retryCount * 2}s... (attempt ${retryCount}/${maxRetries})`);
+              retryTimeout = setTimeout(() => {
+                supabase.removeChannel(channel);
+                setupChannel();
+              }, retryCount * 2000);
+            }
+          }
+        });
+      
+      return channel;
+    };
+    
+    const channel = setupChannel();
 
     // Listen for system reset broadcast with unit_id
     const resetChannel = supabase
@@ -356,6 +381,7 @@ export default function PublicPanel() {
 
     return () => {
       console.log('[PublicPanel] Cleaning up realtime...');
+      if (retryTimeout) clearTimeout(retryTimeout);
       supabase.removeChannel(channel);
       supabase.removeChannel(resetChannel);
     };
@@ -459,12 +485,17 @@ export default function PublicPanel() {
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-4 bg-black/30">
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+          <div className={`w-3 h-3 rounded-full ${realtimeStatus === 'SUBSCRIBED' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
           <span className="text-lg font-medium text-white/80">Sistema de Senhas</span>
           {soundEnabled && (
             <Badge variant="outline" className="text-green-400 border-green-400/50">
               <Volume2 className="w-3 h-3 mr-1" />
               Som Ativo
+            </Badge>
+          )}
+          {realtimeStatus !== 'SUBSCRIBED' && (
+            <Badge variant="outline" className="text-amber-400 border-amber-400/50 text-xs">
+              Reconectando...
             </Badge>
           )}
         </div>
