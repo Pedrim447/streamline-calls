@@ -195,15 +195,14 @@ export default function Reception() {
         toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
+      // Validate organ selection if atendimento ação is enabled
+      if (atendimentoAcaoEnabled && !selectedOrganId) {
+        toast.error('Por favor, selecione o órgão de atendimento');
+        return;
+      }
       
       // Removed rule: no longer require ticket number > last generated
       // Now only requires >= minimum configured
-    }
-
-    // Validate organ selection if atendimento ação is enabled (independent of manual mode)
-    if (atendimentoAcaoEnabled && !selectedOrganId) {
-      toast.error('Por favor, selecione o órgão de atendimento');
-      return;
     }
 
     setIsCreating(true);
@@ -528,8 +527,8 @@ export default function Reception() {
               </div>
             )}
 
-            {/* Organ Selector - show when atendimento ação is enabled (in any mode) */}
-            {atendimentoAcaoEnabled && !organsLoading && (
+            {/* Organ Selector - show when atendimento ação is enabled */}
+            {atendimentoAcaoEnabled && (
               <div className="space-y-2">
                 <Label htmlFor="organSelect">
                   <span className="flex items-center gap-2">
@@ -537,27 +536,26 @@ export default function Reception() {
                     Órgão de Atendimento *
                   </span>
                 </Label>
-                {availableOrgans.length === 0 ? (
+                <Select
+                  value={selectedOrganId}
+                  onValueChange={setSelectedOrganId}
+                  disabled={!callingSystemActive || organsLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o órgão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableOrgans.map((organ) => (
+                      <SelectItem key={organ.id} value={organ.id}>
+                        {organ.code} - {organ.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availableOrgans.length === 0 && !organsLoading && (
                   <p className="text-xs text-destructive">
                     Você não possui órgãos vinculados ao seu perfil. Peça ao administrador para vincular.
                   </p>
-                ) : (
-                  <Select
-                    value={selectedOrganId}
-                    onValueChange={setSelectedOrganId}
-                    disabled={!callingSystemActive}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o órgão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableOrgans.map((organ) => (
-                        <SelectItem key={organ.id} value={organ.id}>
-                          {organ.code} - {organ.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 )}
               </div>
             )}

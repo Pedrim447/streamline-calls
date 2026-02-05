@@ -63,14 +63,13 @@ export default function Dashboard() {
   const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
   const { userOrgans } = useOrgans();
   
-  // Determine organ filter - filter if atendimento ação is enabled and user has organs assigned
-  // NOTE: This works independently of manual mode
+  // Determine organ filter - only filter if atendimento ação is enabled and user has organs assigned
   const organFilter = useMemo(() => {
-    if (atendimentoAcaoEnabled && userOrgans.length > 0) {
+    if (manualModeEnabled && atendimentoAcaoEnabled && userOrgans.length > 0) {
       return userOrgans.map(o => o.id);
     }
     return undefined;
-  }, [atendimentoAcaoEnabled, userOrgans]);
+  }, [manualModeEnabled, atendimentoAcaoEnabled, userOrgans]);
 
   const { 
     tickets, 
@@ -199,8 +198,7 @@ export default function Dashboard() {
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately for faster UX
     
-    // Pass organ filter when Modo Ação is active
-    await callNextTicket(counter.id, organFilter);
+    await callNextTicket(counter.id);
     // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
@@ -394,7 +392,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Organ Filter Banner - only show when atendimento ação is active */}
-            {atendimentoAcaoEnabled && (
+            {manualModeEnabled && atendimentoAcaoEnabled && (
               <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
                 <Building2 className="h-5 w-5 text-primary" />
                 <div className="flex-1">

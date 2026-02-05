@@ -14,11 +14,10 @@ interface UseTicketsOptions {
   organIds?: string[];
   limit?: number;
   realtime?: boolean;
-  atendimentoAcaoEnabled?: boolean;
 }
 
 export function useTickets(options: UseTicketsOptions = {}) {
-  const { unitId, status, organIds, limit = 50, realtime = true, atendimentoAcaoEnabled = false } = options;
+  const { unitId, status, organIds, limit = 50, realtime = true } = options;
   const { profile } = useAuth();
   const { toast } = useToast();
   
@@ -172,7 +171,7 @@ export function useTickets(options: UseTicketsOptions = {}) {
     };
   }, [realtime, effectiveUnitId, status, fetchTickets]);
 
-  const callNextTicket = async (counterId: string, filterOrganIds?: string[]) => {
+  const callNextTicket = async (counterId: string) => {
     if (!effectiveUnitId) {
       toast({
         title: 'Erro',
@@ -183,19 +182,12 @@ export function useTickets(options: UseTicketsOptions = {}) {
     }
 
     try {
-      const requestBody: Record<string, unknown> = {
-        unit_id: effectiveUnitId,
-        counter_id: counterId,
-        action: 'call_next',
-      };
-
-      // Add organ_ids filter for Modo Ação
-      if (filterOrganIds && filterOrganIds.length > 0) {
-        requestBody.organ_ids = filterOrganIds;
-      }
-
       const { data, error } = await supabase.functions.invoke('call-ticket', {
-        body: requestBody,
+        body: {
+          unit_id: effectiveUnitId,
+          counter_id: counterId,
+          action: 'call_next',
+        },
       });
 
       if (error) throw error;
