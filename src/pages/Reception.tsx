@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useManualModeSettings } from '@/hooks/useManualModeSettings';
 import { useOrgans } from '@/hooks/useOrgans';
+import { useOrganTicketInfo } from '@/hooks/useOrganTicketInfo';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,8 +65,28 @@ export default function Reception() {
   // Get organs - use userOrgans when Atendimento Ação is enabled
   const { organs: allOrgans, userOrgans, isLoading: organsLoading } = useOrgans();
   
+  // Get organ-specific ticket info when in Modo Ação
+  const organTicketInfo = useOrganTicketInfo(
+    atendimentoAcaoEnabled ? selectedOrganId : null,
+    profile?.unit_id || DEFAULT_UNIT_ID
+  );
+
   // Filter organs based on user permissions when Atendimento Ação is enabled
   const availableOrgans = atendimentoAcaoEnabled ? userOrgans : allOrgans;
+
+  // Determine effective minimum numbers based on mode
+  const effectiveMinNormal = atendimentoAcaoEnabled && selectedOrganId 
+    ? organTicketInfo.minNumberNormal 
+    : manualModeMinNumber;
+  const effectiveMinPreferential = atendimentoAcaoEnabled && selectedOrganId 
+    ? organTicketInfo.minNumberPreferential 
+    : manualModeMinNumberPreferential;
+  const effectiveLastNormal = atendimentoAcaoEnabled && selectedOrganId 
+    ? organTicketInfo.lastGeneratedNormal 
+    : lastGeneratedNormal;
+  const effectiveLastPreferential = atendimentoAcaoEnabled && selectedOrganId 
+    ? organTicketInfo.lastGeneratedPreferential 
+    : lastGeneratedPreferential;
   
   // Auto-select organ if user has only one assigned (when Atendimento Ação is enabled)
   useEffect(() => {
@@ -186,13 +207,13 @@ export default function Reception() {
         return;
       }
       
-      // Use appropriate minimum based on ticket type
-      const effectiveMinNumber = ticketType === 'preferential' 
-        ? manualModeMinNumberPreferential 
-        : manualModeMinNumber;
+      // Use appropriate minimum based on ticket type and mode
+      const minForValidation = ticketType === 'preferential' 
+        ? effectiveMinPreferential 
+        : effectiveMinNormal;
       
-      if (ticketNum < effectiveMinNumber) {
-        toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
+      if (ticketNum < minForValidation) {
+        toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${minForValidation}`);
         return;
       }
       // Validate organ selection if atendimento ação is enabled
@@ -462,7 +483,7 @@ export default function Reception() {
             )}
 
             {/* Manual Mode Banner */}
-            {callingSystemActive && manualModeEnabled && (
+            {callingSystemActive && manualModeEnabled && !atendimentoAcaoEnabled && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div className="text-sm">
@@ -473,6 +494,30 @@ export default function Reception() {
                   <p className="text-amber-600 dark:text-amber-500">
                     Preferencial: mín. {manualModeMinNumberPreferential} | última: {lastGeneratedPreferential ?? '-'}
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Modo Ação Banner - shows organ-specific info */}
+            {callingSystemActive && atendimentoAcaoEnabled && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-400">
+                <Building2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium">Modo Ação Ativo - Numeração por Órgão</p>
+                  {selectedOrganId ? (
+                    <>
+                      <p className="text-blue-600 dark:text-blue-500">
+                        Normal: início {organTicketInfo.minNumberNormal} | última: {organTicketInfo.lastGeneratedNormal ?? '-'}
+                      </p>
+                      <p className="text-blue-600 dark:text-blue-500">
+                        Preferencial: início {organTicketInfo.minNumberPreferential} | última: {organTicketInfo.lastGeneratedPreferential ?? '-'}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-blue-600 dark:text-blue-500">
+                      Selecione um órgão para ver a numeração
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -515,14 +560,14 @@ export default function Reception() {
                 <Input
                   id="ticketNumber"
                   type="number"
-                  placeholder={`Mínimo: ${ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}`}
+                  placeholder={`Mínimo: ${ticketType === 'preferential' ? effectiveMinPreferential : effectiveMinNormal}`}
                   value={manualTicketNumber}
                   onChange={(e) => setManualTicketNumber(e.target.value)}
-                  min={ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
+                  min={ticketType === 'preferential' ? effectiveMinPreferential : effectiveMinNormal}
                   disabled={!callingSystemActive}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Número mínimo permitido: {ticketType === 'preferential' ? manualModeMinNumberPreferential : manualModeMinNumber}
+                  Número mínimo permitido: {ticketType === 'preferential' ? effectiveMinPreferential : effectiveMinNormal}
                 </p>
               </div>
             )}
