@@ -28,7 +28,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   // Stabilize organIds reference to prevent useEffect re-runs
-  const organIdsKey = organIds ? organIds.sort().join(',') : '';
+  const organIdsKey = organIds ? [...organIds].sort().join(',') : '';
   const stableOrganIds = useRef<string[]>(organIds || []);
   
   // Update ref only when the actual values change
