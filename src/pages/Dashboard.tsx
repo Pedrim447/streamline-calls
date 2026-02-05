@@ -33,11 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
 import { Users, UserCheck } from 'lucide-react';
 
-type TicketTypeFilter = 'normal' | 'preferential';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
@@ -62,7 +60,9 @@ export default function Dashboard() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
-  const [ticketTypeFilter, setTicketTypeFilter] = useState<TicketTypeFilter>('normal');
+
+  // Get service type from profile - default to 'normal' if not set
+  const serviceType = profile?.service_type || 'normal';
 
   // Get settings and user organs
   const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
@@ -246,7 +246,7 @@ export default function Dashboard() {
       ? userOrgans.map(o => o.id) 
       : undefined;
 
-    await callNextTicket(counter.id, organIdsToPass, ticketTypeFilter);
+    await callNextTicket(counter.id, organIdsToPass, serviceType);
     // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
@@ -516,32 +516,16 @@ export default function Dashboard() {
                     {isCallBlocked ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
-                  {/* Ticket Type Filter */}
-                  <div className="flex flex-col items-center gap-2 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo de Atendimento</span>
-                    <ToggleGroup 
-                      type="single" 
-                      value={ticketTypeFilter} 
-                      onValueChange={(value) => value && setTicketTypeFilter(value as TicketTypeFilter)}
-                      className="w-full"
-                    >
-                      <ToggleGroupItem 
-                        value="normal" 
-                        aria-label="Atendimento" 
-                        className="flex-1 h-10 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                      >
-                        <Users className="h-4 w-4 mr-2" />
-                        Atendimento
-                      </ToggleGroupItem>
-                      <ToggleGroupItem 
-                        value="preferential" 
-                        aria-label="Preferencial" 
-                        className="flex-1 h-10 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                      >
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Preferencial
-                      </ToggleGroupItem>
-                    </ToggleGroup>
+                  {/* Service Type Indicator */}
+                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg border bg-muted/30">
+                    {serviceType === 'preferential' ? (
+                      <UserCheck className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Users className="h-5 w-5 text-primary" />
+                    )}
+                    <span className="font-medium">
+                      {serviceType === 'preferential' ? 'Atendimento Preferencial' : 'Atendimento Normal'}
+                    </span>
                   </div>
 
 

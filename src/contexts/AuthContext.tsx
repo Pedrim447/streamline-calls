@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
+type ServiceType = Database['public']['Enums']['service_type'];
 
 interface Profile {
   id: string;
@@ -14,6 +15,7 @@ interface Profile {
   avatar_url: string | null;
   is_active: boolean;
   current_session_id: string | null;
+  service_type: ServiceType | null;
 }
 
 interface AuthContextType {
