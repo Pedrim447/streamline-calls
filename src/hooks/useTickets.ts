@@ -204,7 +204,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     };
   }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIdsKey]);
 
-  const callNextTicket = async (counterId: string, organIdsForCall?: string[]) => {
+  const callNextTicket = async (counterId: string, organIdsForCall?: string[], ticketTypeFilter?: TicketType) => {
     if (!effectiveUnitId) {
       toast({
         title: 'Erro',
@@ -224,6 +224,11 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       // Pass organ_ids if provided (for filtering by attendant's organs)
       if (organIdsForCall && organIdsForCall.length > 0) {
         body.organ_ids = organIdsForCall;
+      }
+
+      // Pass ticket_type if provided (for filtering by normal or preferential)
+      if (ticketTypeFilter) {
+        body.ticket_type = ticketTypeFilter;
       }
 
       const { data, error } = await supabase.functions.invoke('call-ticket', {

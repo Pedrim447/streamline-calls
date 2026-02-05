@@ -12,6 +12,7 @@ interface CallTicketRequest {
   ticket_id?: string;
   skip_reason?: string;
   organ_ids?: string[];
+  ticket_type?: 'normal' | 'preferential';
 }
 
 Deno.serve(async (req) => {
@@ -61,7 +62,9 @@ Deno.serve(async (req) => {
     const body: CallTicketRequest = await req.json();
     const { action, unit_id, counter_id, ticket_id, skip_reason, organ_ids } = body;
 
-    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id, 'Organ IDs:', organ_ids);
+    const { action, unit_id, counter_id, ticket_id, skip_reason, organ_ids, ticket_type } = body;
+
+    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id, 'Organ IDs:', organ_ids, 'Ticket Type:', ticket_type);
 
     if (action === 'call_next') {
       if (!unit_id || !counter_id) {
@@ -83,6 +86,11 @@ Deno.serve(async (req) => {
       // Filter by organ_ids if provided (attendant can only call tickets from their organs)
       if (organ_ids && organ_ids.length > 0) {
         ticketQuery = ticketQuery.in('organ_id', organ_ids);
+      }
+
+      // Filter by ticket_type if provided (attendant can choose to call only normal or preferential)
+      if (ticket_type) {
+        ticketQuery = ticketQuery.eq('ticket_type', ticket_type);
       }
 
       const { data: nextTicket, error: findError } = await ticketQuery
