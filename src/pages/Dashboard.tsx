@@ -204,12 +204,36 @@ export default function Dashboard() {
     if (!counter) return;
     if (cooldownRemaining > 0) return;
     
+    // Prevent calling if organs are still loading in atendimento ação mode
+    if (atendimentoAcaoEnabled && organsLoading) {
+      toast({
+        title: 'Aguarde',
+        description: 'Carregando informações dos órgãos...',
+      });
+      return;
+    }
+    
+    // Prevent calling if user has no organs assigned in atendimento ação mode
+    if (atendimentoAcaoEnabled && userOrgans.length === 0) {
+      toast({
+        title: 'Sem Órgãos',
+        description: 'Você não está vinculado a nenhum órgão. Contate o administrador.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     // Start processing immediately for instant feedback
     setIsProcessing(true);
     startCooldown(); // Start cooldown immediately for faster UX
     
-    // Pass organFilter to call only tickets from attendant's organs
-    await callNextTicket(counter.id, organFilter);
+    // Pass organ IDs from userOrgans directly (more reliable than organFilter during render)
+    const organIdsToPass = atendimentoAcaoEnabled && userOrgans.length > 0 
+      ? userOrgans.map(o => o.id) 
+      : undefined;
+    
+    console.log('[Dashboard] Calling next ticket with organ IDs:', organIdsToPass);
+    await callNextTicket(counter.id, organIdsToPass);
     // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
