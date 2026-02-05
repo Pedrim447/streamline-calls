@@ -139,6 +139,7 @@ export type Database = {
           is_active: boolean | null
           last_login_at: string | null
           matricula: string | null
+          service_type: Database["public"]["Enums"]["service_type"] | null
           unit_id: string | null
           updated_at: string
           user_id: string
@@ -153,6 +154,7 @@ export type Database = {
           is_active?: boolean | null
           last_login_at?: string | null
           matricula?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
           unit_id?: string | null
           updated_at?: string
           user_id: string
@@ -167,6 +169,7 @@ export type Database = {
           is_active?: boolean | null
           last_login_at?: string | null
           matricula?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
           unit_id?: string | null
           updated_at?: string
           user_id?: string
@@ -467,6 +470,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "attendant" | "recepcao" | "painel"
+      service_type: "normal" | "preferential"
       ticket_status:
         | "waiting"
         | "called"
@@ -603,6 +607,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "attendant", "recepcao", "painel"],
+      service_type: ["normal", "preferential"],
       ticket_status: [
         "waiting",
         "called",
