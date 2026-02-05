@@ -35,20 +35,14 @@ Deno.serve(async (req) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Parallel fetch: settings, counter, and organ (if provided)
+    // Parallel fetch: settings and organ (if provided)
+    // Counter fetch depends on per_organ_numbers_enabled setting, so we fetch it after settings
     const fetchPromises: Promise<any>[] = [
       supabaseAdmin
         .from('settings')
         .select('normal_priority, preferential_priority, manual_mode_enabled, manual_mode_min_number, manual_mode_min_number_preferential, calling_system_active, atendimento_acao_enabled, per_organ_numbers_enabled')
         .eq('unit_id', unit_id)
-        .single(),
-      supabaseAdmin
-        .from('ticket_counters')
-        .select('id, last_number')
-        .eq('unit_id', unit_id)
-        .eq('ticket_type', ticket_type)
-        .eq('counter_date', today)
-        .maybeSingle()
+        .single()
     ];
 
     // If organ_id provided, also fetch organ settings
@@ -64,8 +58,7 @@ Deno.serve(async (req) => {
 
     const results = await Promise.all(fetchPromises);
     const settingsResult = results[0];
-    const counterResult = results[1];
-    const organResult = organ_id ? results[2] : null;
+    const organResult = organ_id ? results[1] : null;
 
     const settings = settingsResult.data;
     const organSettings = organResult?.data;
@@ -81,10 +74,29 @@ Deno.serve(async (req) => {
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const atendimentoAcaoEnabled = settings?.atendimento_acao_enabled ?? false;
     const perOrganNumbersEnabled = settings?.per_organ_numbers_enabled ?? false;
-    
+    const usePerOrganCounters = atendimentoAcaoEnabled && perOrganNumbersEnabled && organ_id;
+
+    // Fetch the appropriate counter based on mode
+    let counterQuery = supabaseAdmin
+      .from('ticket_counters')
+      .select('id, last_number')
+      .eq('unit_id', unit_id)
+      .eq('ticket_type', ticket_type)
+      .eq('counter_date', today);
+
+    if (usePerOrganCounters) {
+      // Per-organ mode: fetch counter for this specific organ
+      counterQuery = counterQuery.eq('organ_id', organ_id);
+    } else {
+      // Global mode: fetch counter without organ_id (or null)
+      counterQuery = counterQuery.is('organ_id', null);
+    }
+
+    const counterResult = await counterQuery.maybeSingle();
+
     // Determine minimum number based on mode
     let minNumber: number;
-    if (atendimentoAcaoEnabled && perOrganNumbersEnabled && organSettings) {
+    if (usePerOrganCounters && organSettings) {
       // Modo Ação with per-organ numbers: use per-organ minimums
       minNumber = ticket_type === 'preferential' 
         ? (organSettings.min_number_preferential ?? 1)
@@ -108,16 +120,22 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Check duplicate in parallel with nothing - we need this check
-      const { data: existingTicket } = await supabaseAdmin
+      // Check for duplicate ticket number
+      let duplicateQuery = supabaseAdmin
         .from('tickets')
         .select('id')
         .eq('unit_id', unit_id)
         .eq('ticket_number', manual_ticket_number)
         .eq('ticket_type', ticket_type)
-        .gte('created_at', `${today}T00:00:00`)
-        .maybeSingle();
-      
+        .gte('created_at', `${today}T00:00:00`);
+
+      // In per-organ mode, check duplicates within the same organ only
+      if (usePerOrganCounters) {
+        duplicateQuery = duplicateQuery.eq('organ_id', organ_id);
+      }
+
+      const { data: existingTicket } = await duplicateQuery.maybeSingle();
+
       if (existingTicket) {
         return new Response(
           JSON.stringify({ error: `Senha ${ticket_type === 'preferential' ? 'P' : 'N'}-${manual_ticket_number} já foi gerada hoje` }),
@@ -140,20 +158,28 @@ Deno.serve(async (req) => {
       ? (settings?.preferential_priority || 10)
       : (settings?.normal_priority || 5);
 
-    // Upsert counter and create ticket in parallel
-    const counterPromise = existingCounter
-      ? supabaseAdmin
-          .from('ticket_counters')
-          .update({ last_number: nextNumber })
-          .eq('id', existingCounter.id)
-      : supabaseAdmin
-          .from('ticket_counters')
-          .insert({
-            unit_id,
-            ticket_type,
-            counter_date: today,
-            last_number: nextNumber,
-          });
+    // Upsert counter based on mode
+    let counterPromise;
+    if (existingCounter) {
+      counterPromise = supabaseAdmin
+        .from('ticket_counters')
+        .update({ last_number: nextNumber })
+        .eq('id', existingCounter.id);
+    } else {
+      // Create new counter with organ_id if in per-organ mode
+      const counterData: any = {
+        unit_id,
+        ticket_type,
+        counter_date: today,
+        last_number: nextNumber,
+      };
+      if (usePerOrganCounters) {
+        counterData.organ_id = organ_id;
+      }
+      counterPromise = supabaseAdmin
+        .from('ticket_counters')
+        .insert(counterData);
+    }
 
     const ticketPromise = supabaseAdmin
       .from('tickets')

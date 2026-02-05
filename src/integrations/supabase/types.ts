@@ -252,6 +252,7 @@ export type Database = {
           created_at: string
           id: string
           last_number: number
+          organ_id: string | null
           ticket_type: Database["public"]["Enums"]["ticket_type"]
           unit_id: string
           updated_at: string
@@ -261,6 +262,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_number?: number
+          organ_id?: string | null
           ticket_type: Database["public"]["Enums"]["ticket_type"]
           unit_id: string
           updated_at?: string
@@ -270,11 +272,19 @@ export type Database = {
           created_at?: string
           id?: string
           last_number?: number
+          organ_id?: string | null
           ticket_type?: Database["public"]["Enums"]["ticket_type"]
           unit_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ticket_counters_organ_id_fkey"
+            columns: ["organ_id"]
+            isOneToOne: false
+            referencedRelation: "organs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ticket_counters_unit_id_fkey"
             columns: ["unit_id"]
