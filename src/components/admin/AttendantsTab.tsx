@@ -25,6 +25,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type AppRole = Database["public"]["Enums"]["app_role"];
+type ServiceType = Database["public"]["Enums"]["service_type"];
 
 interface ProfileWithRoles extends Profile {
   roles: AppRole[];
@@ -54,6 +55,11 @@ const roleBadgeVariants: Record<AppRole, "default" | "secondary" | "outline"> = 
   painel: "outline",
 };
 
+const serviceTypeLabels: Record<ServiceType, string> = {
+  normal: "Atendimento",
+  preferential: "Preferencial",
+};
+
 export function AttendantsTab() {
   const { toast } = useToast();
   const { profile: authProfile } = useAuth();
@@ -64,6 +70,8 @@ export function AttendantsTab() {
   const [isOrgansDialogOpen, setIsOrgansDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<ProfileWithRoles | null>(null);
   const [selectedOrgans, setSelectedOrgans] = useState<string[]>([]);
+  const [isServiceTypeDialogOpen, setIsServiceTypeDialogOpen] = useState(false);
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>('normal');
 
   // Form state
   const [formEmail, setFormEmail] = useState("");
@@ -71,6 +79,7 @@ export function AttendantsTab() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<AppRole>("attendant");
   const [formMatricula, setFormMatricula] = useState("");
+  const [formServiceType, setFormServiceType] = useState<ServiceType>("normal");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
@@ -129,6 +138,44 @@ export function AttendantsTab() {
     setSelectedProfile(profile);
     setSelectedOrgans(profile.organ_ids);
     setIsOrgansDialogOpen(true);
+  };
+
+  const openServiceTypeDialog = (profile: ProfileWithRoles) => {
+    setSelectedProfile(profile);
+    setSelectedServiceType((profile as any).service_type || 'normal');
+    setIsServiceTypeDialogOpen(true);
+  };
+
+  const handleSaveServiceType = async () => {
+    if (!selectedProfile) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ service_type: selectedServiceType })
+        .eq('id', selectedProfile.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Tipo de atendimento atualizado com sucesso',
+      });
+      
+      setIsServiceTypeDialogOpen(false);
+      fetchProfiles();
+    } catch (error) {
+      console.error('Error saving service type:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar tipo de atendimento',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveOrgans = async () => {
@@ -299,6 +346,7 @@ export function AttendantsTab() {
     setFormPassword("");
     setFormRole("attendant");
     setFormMatricula("");
+    setFormServiceType("normal");
   };
 
   const getRoleIcon = (role: AppRole) => {
@@ -469,6 +517,11 @@ export function AttendantsTab() {
                       <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{profile.email}</span>
                         {(profile as any).matricula && <span>• Mat: {(profile as any).matricula}</span>}
+                        {(primaryRole === 'attendant') && (
+                          <Badge variant="outline" className="text-xs">
+                            {serviceTypeLabels[(profile as any).service_type || 'normal']}
+                          </Badge>
+                        )}
                         {profile.organ_ids.length > 0 && (
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
@@ -488,6 +541,22 @@ export function AttendantsTab() {
                         onClick={() => openOrgansDialog(profile)}
                       >
                         <Building2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    
+                    {/* Show service type button for attendants */}
+                    {primaryRole === 'attendant' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openServiceTypeDialog(profile)}
+                        title="Tipo de atendimento"
+                      >
+                        {(profile as any).service_type === 'preferential' ? (
+                          <UserCheck className="h-4 w-4" />
+                        ) : (
+                          <Users className="h-4 w-4" />
+                        )}
                       </Button>
                     )}
                     
@@ -566,6 +635,48 @@ export function AttendantsTab() {
               Cancelar
             </Button>
             <Button onClick={handleSaveOrgans} disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Type Dialog */}
+      <Dialog open={isServiceTypeDialogOpen} onOpenChange={setIsServiceTypeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tipo de Atendimento</DialogTitle>
+            <DialogDescription>
+              Selecione o tipo de atendimento para {selectedProfile?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant={selectedServiceType === 'normal' ? 'default' : 'outline'}
+                className="h-20 flex flex-col gap-2"
+                onClick={() => setSelectedServiceType('normal')}
+              >
+                <Users className="h-6 w-6" />
+                <span>Atendimento</span>
+              </Button>
+              <Button
+                variant={selectedServiceType === 'preferential' ? 'default' : 'outline'}
+                className="h-20 flex flex-col gap-2"
+                onClick={() => setSelectedServiceType('preferential')}
+              >
+                <UserCheck className="h-6 w-6" />
+                <span>Preferencial</span>
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsServiceTypeDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveServiceType} disabled={isSubmitting}>
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
