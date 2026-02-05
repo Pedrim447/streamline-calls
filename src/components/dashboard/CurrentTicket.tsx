@@ -24,7 +24,8 @@ interface CurrentTicketProps {
   ticket: Ticket | null;
   counter: Counter;
   isProcessing: boolean;
-  cooldownRemaining: number;
+  repeatCooldownRemaining: number;
+  isSpeaking?: boolean;
   nextTickets: Ticket[];
   onRepeatCall: () => void;
   onStartService: () => void;
@@ -36,7 +37,8 @@ export function CurrentTicket({
   ticket,
   counter,
   isProcessing,
-  cooldownRemaining,
+  repeatCooldownRemaining,
+  isSpeaking = false,
   nextTickets,
   onRepeatCall,
   onStartService,
@@ -54,7 +56,8 @@ export function CurrentTicket({
     }
   };
 
-  const isCooldownActive = cooldownRemaining > 0;
+  const isCooldownActive = repeatCooldownRemaining > 0;
+  const isBlocked = isCooldownActive || isSpeaking;
 
   return (
     <Card className={ticket ? 'border-primary shadow-xl' : ''}>
@@ -67,7 +70,13 @@ export function CurrentTicket({
           {isCooldownActive && (
             <Badge variant="outline" className="animate-pulse">
               <Clock className="h-3 w-3 mr-1" />
-              Aguarde {cooldownRemaining}s
+              Aguarde {repeatCooldownRemaining}s
+            </Badge>
+          )}
+          {isSpeaking && !isCooldownActive && (
+            <Badge variant="outline" className="animate-pulse text-amber-600 border-amber-400">
+              <Clock className="h-3 w-3 mr-1" />
+              Falando...
             </Badge>
           )}
         </CardTitle>
