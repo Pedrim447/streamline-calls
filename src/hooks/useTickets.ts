@@ -133,6 +133,10 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
               if (status && status.length > 0 && !status.includes(newTicket.status)) {
                 return prev;
               }
+              // Check if matches organ filter (if provided)
+              if (organIds && organIds.length > 0 && newTicket.organ_id && !organIds.includes(newTicket.organ_id)) {
+                return prev;
+              }
               return [...prev, newTicket].sort((a, b) => {
                 if (b.priority !== a.priority) return b.priority - a.priority;
                 return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -143,6 +147,10 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
               const updatedTicket = payload.new as Ticket;
               // If status filter exists and ticket no longer matches, remove it
               if (status && status.length > 0 && !status.includes(updatedTicket.status)) {
+                return prev.filter(t => t.id !== updatedTicket.id);
+              }
+              // If organ filter exists and ticket no longer matches, remove it
+              if (organIds && organIds.length > 0 && updatedTicket.organ_id && !organIds.includes(updatedTicket.organ_id)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
               // Otherwise update it
