@@ -95,7 +95,16 @@ export default function Dashboard() {
     enabled: shouldFetchTickets,
   });
 
-  const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s
+  const { 
+    callCooldownRemaining, 
+    repeatCooldownRemaining, 
+    isSpeaking,
+    isCallBlocked,
+    isRepeatBlocked,
+    startCallCooldown, 
+    startRepeatCooldown 
+  } = useCallCooldown({ callDuration: 3, repeatDuration: 10, speakingDuration: 8 });
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -202,7 +211,7 @@ export default function Dashboard() {
 
   const handleCallNext = async () => {
     if (!counter) return;
-    if (cooldownRemaining > 0) return;
+    if (isCallBlocked) return;
     
     // Prevent calling if organs are still loading in atendimento ação mode
     if (atendimentoAcaoEnabled && organsLoading) {
@@ -225,7 +234,7 @@ export default function Dashboard() {
     
     // Start processing immediately for instant feedback
     setIsProcessing(true);
-    startCooldown(); // Start cooldown immediately for faster UX
+    startCallCooldown(); // Start cooldown immediately for faster UX
     
     // Pass organ IDs from userOrgans directly (more reliable than organFilter during render)
     const organIdsToPass = atendimentoAcaoEnabled && userOrgans.length > 0 
@@ -240,10 +249,10 @@ export default function Dashboard() {
 
   const handleRepeatCall = async () => {
     if (!currentTicket || !counter) return;
-    if (cooldownRemaining > 0) return;
+    if (isRepeatBlocked) return;
     
     setIsProcessing(true);
-    startCooldown(); // Start cooldown immediately
+    startRepeatCooldown(); // Start 10s cooldown for repeat
     
     await repeatCall(currentTicket.id);
     // Voice is handled by PublicPanel via realtime
@@ -452,8 +461,9 @@ export default function Dashboard() {
               <CurrentTicket 
                 ticket={currentTicket}
                 counter={counter}
-                isProcessing={isProcessing}
-                cooldownRemaining={cooldownRemaining}
+                isProcessing={isProcessing || isSpeaking}
+                repeatCooldownRemaining={repeatCooldownRemaining}
+                isSpeaking={isSpeaking}
                 nextTickets={waitingTickets.slice(0, 5)}
                 onRepeatCall={handleRepeatCall}
                 onStartService={handleStartService}
@@ -471,10 +481,13 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Cooldown indicator */}
-                  {cooldownRemaining > 0 && (
+                  {isCallBlocked && (
                     <div className="text-center py-3 bg-muted rounded-lg">
                       <p className="text-sm text-muted-foreground">
-                        Aguarde <span className="font-bold text-primary">{cooldownRemaining}s</span> para chamar novamente
+                        {isSpeaking 
+                          ? 'Aguarde a voz terminar de falar...' 
+                          : <>Aguarde <span className="font-bold text-primary">{callCooldownRemaining}s</span> para chamar novamente</>
+                        }
                       </p>
                     </div>
                   )}
@@ -483,19 +496,19 @@ export default function Dashboard() {
                     size="lg" 
                     className="w-full h-16 text-lg bg-primary hover:bg-primary/90"
                     onClick={handleCallNext}
-                    disabled={isProcessing || currentTicket !== null || cooldownRemaining > 0}
+                    disabled={isProcessing || currentTicket !== null || isCallBlocked}
                   >
                     {isProcessing ? (
                       <RefreshCw className="h-6 w-6 mr-2 animate-spin" />
-                    ) : cooldownRemaining > 0 ? (
+                    ) : isCallBlocked ? (
                       <>
                         <Clock className="h-6 w-6 mr-2" />
-                        Aguarde {cooldownRemaining}s
+                        {isSpeaking ? 'Aguarde...' : `Aguarde ${callCooldownRemaining}s`}
                       </>
                     ) : (
                       <PhoneForwarded className="h-6 w-6 mr-2" />
                     )}
-                    {cooldownRemaining > 0 ? '' : 'Chamar Próxima Senha'}
+                    {isCallBlocked ? '' : 'Chamar Próxima Senha'}
                   </Button>
 
 
@@ -504,10 +517,10 @@ export default function Dashboard() {
                       <Button 
                         variant="outline" 
                         onClick={handleRepeatCall}
-                        disabled={isProcessing || cooldownRemaining > 0}
+                        disabled={isProcessing || isRepeatBlocked}
                       >
                         <Volume2 className="h-4 w-4 mr-2" />
-                        {cooldownRemaining > 0 ? `${cooldownRemaining}s` : 'Repetir'}
+                        {isSpeaking ? 'Aguarde...' : (repeatCooldownRemaining > 0 ? `${repeatCooldownRemaining}s` : 'Repetir')}
                       </Button>
                       
                       {currentTicket.status === 'called' ? (
