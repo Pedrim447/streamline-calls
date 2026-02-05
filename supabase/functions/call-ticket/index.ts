@@ -11,6 +11,7 @@ interface CallTicketRequest {
   counter_id?: string;
   ticket_id?: string;
   skip_reason?: string;
+  organ_ids?: string[]; // Filter by organs when in Modo Ação
 }
 
 Deno.serve(async (req) => {
@@ -59,8 +60,9 @@ Deno.serve(async (req) => {
 
     const body: CallTicketRequest = await req.json();
     const { action, unit_id, counter_id, ticket_id, skip_reason } = body;
+    const organ_ids = body.organ_ids;
 
-    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id);
+    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id, 'Organ IDs:', organ_ids);
 
     if (action === 'call_next') {
       if (!unit_id || !counter_id) {
@@ -70,23 +72,31 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Find the next waiting ticket with highest priority
-      const { data: nextTicket, error: findError } = await supabaseAdmin
+      // Build query to find the next waiting ticket with highest priority
+      let ticketQuery = supabaseAdmin
         .from('tickets')
         .select('*')
         .eq('unit_id', unit_id)
         .eq('status', 'waiting')
         .order('priority', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
+        .order('created_at', { ascending: true });
+
+      // Filter by organ_ids if provided (Modo Ação active)
+      if (organ_ids && organ_ids.length > 0) {
+        console.log('Filtering by organ_ids:', organ_ids);
+        ticketQuery = ticketQuery.in('organ_id', organ_ids);
+      }
+
+      const { data: nextTicket, error: findError } = await ticketQuery.limit(1).single();
 
       // If no ticket in queue, return message to attendant
       if (findError || !nextTicket) {
         console.log('No tickets in queue');
         return new Response(
           JSON.stringify({ 
-            error: 'Não há senhas na fila para chamar. Aguarde a recepção entregar novas senhas.',
+            error: organ_ids && organ_ids.length > 0 
+              ? 'Não há senhas na fila para os órgãos que você atende. Aguarde novas senhas.'
+              : 'Não há senhas na fila para chamar. Aguarde a recepção entregar novas senhas.',
             no_tickets: true,
             queue_empty: true
           }),
