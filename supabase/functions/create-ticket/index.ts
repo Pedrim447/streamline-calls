@@ -73,8 +73,8 @@ Deno.serve(async (req) => {
 
     const manualModeEnabled = settings?.manual_mode_enabled ?? false;
     const atendimentoAcaoEnabled = settings?.atendimento_acao_enabled ?? false;
-    const perOrganNumbersEnabled = settings?.per_organ_numbers_enabled ?? false;
-    const usePerOrganCounters = atendimentoAcaoEnabled && perOrganNumbersEnabled && organ_id;
+    // When Atendimento Ação is enabled and organ_id is provided, ALWAYS use per-organ numbering
+    const usePerOrganCounters = atendimentoAcaoEnabled && organ_id;
 
     // Fetch the appropriate counter based on mode
     let counterQuery = supabaseAdmin
@@ -97,12 +97,12 @@ Deno.serve(async (req) => {
     // Determine minimum number based on mode
     let minNumber: number;
     if (usePerOrganCounters && organSettings) {
-      // Modo Ação with per-organ numbers: use per-organ minimums
+      // Modo Ação: ALWAYS use per-organ minimums (ignore global settings)
       minNumber = ticket_type === 'preferential' 
         ? (organSettings.min_number_preferential ?? 1)
         : (organSettings.min_number_normal ?? 1);
     } else {
-      // Standard mode or Ação without per-organ: use global settings
+      // Standard mode (without Modo Ação): use global settings
       minNumber = ticket_type === 'preferential' 
         ? (settings?.manual_mode_min_number_preferential ?? 0)
         : (settings?.manual_mode_min_number ?? 500);
