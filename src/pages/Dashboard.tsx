@@ -24,7 +24,8 @@ import {
   Shield,
   ExternalLink,
   Monitor,
-  Building2
+  Building2,
+  ArrowLeftRight
 } from 'lucide-react';
 import {
   Select,
@@ -50,7 +51,7 @@ const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, isAdmin, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [counter, setCounter] = useState<Counter | null>(null);
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
@@ -60,6 +61,7 @@ export default function Dashboard() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
+  const [isChangingServiceType, setIsChangingServiceType] = useState(false);
 
   // Get service type from profile - default to 'normal' if not set
   const serviceType = profile?.service_type || 'normal';
