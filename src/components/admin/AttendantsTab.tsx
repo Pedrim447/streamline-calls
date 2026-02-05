@@ -480,8 +480,8 @@ export function AttendantsTab() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Only show organs button for attendants */}
-                    {primaryRole === 'attendant' && organs.length > 0 && (
+                    {/* Show organs button for attendants and reception users */}
+                    {(primaryRole === 'attendant' || primaryRole === 'recepcao') && organs.length > 0 && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -524,9 +524,9 @@ export function AttendantsTab() {
       <Dialog open={isOrgansDialogOpen} onOpenChange={setIsOrgansDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Órgãos do Atendente</DialogTitle>
+            <DialogTitle>Órgãos do Usuário</DialogTitle>
             <DialogDescription>
-              Selecione os órgãos que {selectedProfile?.full_name} poderá atender
+              Selecione os órgãos que {selectedProfile?.full_name} poderá acessar
             </DialogDescription>
           </DialogHeader>
           
