@@ -232,7 +232,6 @@ export default function Dashboard() {
       ? userOrgans.map(o => o.id) 
       : undefined;
     
-    console.log('[Dashboard] Calling next ticket with organ IDs:', organIdsToPass);
     await callNextTicket(counter.id, organIdsToPass);
     // Voice is handled by PublicPanel via realtime
     
