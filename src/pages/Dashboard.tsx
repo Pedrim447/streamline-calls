@@ -24,7 +24,8 @@ import {
   Shield,
   ExternalLink,
   Monitor,
-  Building2
+  Building2,
+  ArrowLeftRight
 } from 'lucide-react';
 import {
   Select,
@@ -50,7 +51,7 @@ const DEFAULT_UNIT_ID = 'a0000000-0000-0000-0000-000000000001';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, isAdmin, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isAdmin, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const [counter, setCounter] = useState<Counter | null>(null);
   const [availableCounters, setAvailableCounters] = useState<Counter[]>([]);
@@ -60,6 +61,7 @@ export default function Dashboard() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
+  const [isChangingServiceType, setIsChangingServiceType] = useState(false);
 
   // Get service type from profile - default to 'normal' if not set
   const serviceType = profile?.service_type || 'normal';
@@ -300,6 +302,34 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
+  const handleToggleServiceType = async () => {
+    if (!user?.id || currentTicket) return;
+    
+    setIsChangingServiceType(true);
+    
+    const newType = serviceType === 'normal' ? 'preferential' : 'normal';
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ service_type: newType })
+      .eq('user_id', user.id);
+    
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível alterar o tipo de atendimento.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Tipo alterado',
+        description: `Agora você está atendendo: ${newType === 'preferential' ? 'Preferencial' : 'Normal'}`,
+      });
+      await refreshProfile();
+    }
+    
+    setIsChangingServiceType(false);
+  };
 
   const handleLogout = async () => {
     // Release the counter before logging out
@@ -517,7 +547,14 @@ export default function Dashboard() {
                   </Button>
 
                   {/* Service Type Indicator */}
-                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg border bg-muted/30">
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 justify-between"
+                    onClick={handleToggleServiceType}
+                    disabled={isChangingServiceType || currentTicket !== null}
+                    title={currentTicket ? 'Finalize o atendimento atual para trocar o tipo' : 'Clique para trocar o tipo de atendimento'}
+                  >
+                    <div className="flex items-center gap-2">
                     {serviceType === 'preferential' ? (
                       <UserCheck className="h-5 w-5 text-primary" />
                     ) : (
@@ -526,7 +563,20 @@ export default function Dashboard() {
                     <span className="font-medium">
                       {serviceType === 'preferential' ? 'Atendimento Preferencial' : 'Atendimento Normal'}
                     </span>
-                  </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      {isChangingServiceType ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : currentTicket ? (
+                        <span className="text-xs">Em atendimento</span>
+                      ) : (
+                        <>
+                          <ArrowLeftRight className="h-4 w-4" />
+                          <span className="text-xs">Trocar</span>
+                        </>
+                      )}
+                    </div>
+                  </Button>
 
 
                   {currentTicket && (
