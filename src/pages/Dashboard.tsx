@@ -232,9 +232,6 @@ export default function Dashboard() {
       ? userOrgans.map(o => o.id) 
       : undefined;
     
-        console.log('[Dashboard] User organs:', userOrgans);
-        console.log('[Dashboard] Organ filter:', organFilter);
-        console.log('[Dashboard] Calling next ticket with organ IDs:', organIdsToPass);
     await callNextTicket(counter.id, organIdsToPass);
     // Voice is handled by PublicPanel via realtime
     
@@ -385,17 +382,6 @@ export default function Dashboard() {
 
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Debug info - remove after fixing */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-            Debug: atendimentoAcaoEnabled={String(atendimentoAcaoEnabled)}, 
-            userOrgans={userOrgans.length}, 
-            organFilter={JSON.stringify(organFilter)}, 
-            tickets={tickets.length},
-            organsLoading={String(organsLoading)}
-          </div>
-        )}
-        
         {isSelectingCounter ? (
           <Card>
             <CardHeader>
