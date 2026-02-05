@@ -26,6 +26,15 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  
+  // Stabilize organIds reference to prevent useEffect re-runs
+  const organIdsKey = organIds ? organIds.sort().join(',') : '';
+  const stableOrganIds = useRef<string[]>(organIds || []);
+  
+  // Update ref only when the actual values change
+  useEffect(() => {
+    stableOrganIds.current = organIds || [];
+  }, [organIdsKey]);
 
   const effectiveUnitId = unitId ?? profile?.unit_id;
 
@@ -42,7 +51,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     }
     
     // If organIds is an empty array, don't fetch (no organs assigned)
-    if (organIds && organIds.length === 0) {
+    if (stableOrganIds.current && stableOrganIds.current.length === 0 && organIdsKey === '') {
       setTickets([]);
       setIsLoading(false);
       return;
@@ -62,8 +71,8 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       }
 
       // Filter by organ IDs if provided
-      if (organIds && organIds.length > 0) {
-        query = query.in('organ_id', organIds);
+      if (stableOrganIds.current && stableOrganIds.current.length > 0) {
+        query = query.in('organ_id', stableOrganIds.current);
       }
 
       const { data, error: fetchError } = await query;
@@ -77,7 +86,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, organIds, limit, enabled]);
+  }, [effectiveUnitId, status, organIdsKey, limit, enabled]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
@@ -106,7 +115,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     if (!realtime || !effectiveUnitId || !enabled) return;
     
     // Don't subscribe if organIds is empty array (no organs assigned)
-    if (organIds && organIds.length === 0) return;
+    if (organIdsKey === '' && stableOrganIds.current.length === 0) return;
 
     const channel = supabase
       .channel(`tickets-${effectiveUnitId}`, {
@@ -134,7 +143,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
                 return prev;
               }
               // Check if matches organ filter (if provided)
-              if (organIds && organIds.length > 0 && newTicket.organ_id && !organIds.includes(newTicket.organ_id)) {
+              if (stableOrganIds.current.length > 0 && newTicket.organ_id && !stableOrganIds.current.includes(newTicket.organ_id)) {
                 return prev;
               }
               return [...prev, newTicket].sort((a, b) => {
@@ -150,7 +159,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
               // If organ filter exists and ticket no longer matches, remove it
-              if (organIds && organIds.length > 0 && updatedTicket.organ_id && !organIds.includes(updatedTicket.organ_id)) {
+              if (stableOrganIds.current.length > 0 && updatedTicket.organ_id && !stableOrganIds.current.includes(updatedTicket.organ_id)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
               // Otherwise update it
@@ -193,7 +202,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
-  }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIds]);
+  }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIdsKey]);
 
   const callNextTicket = async (counterId: string, organIdsForCall?: string[]) => {
     if (!effectiveUnitId) {
