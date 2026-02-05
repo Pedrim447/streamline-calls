@@ -33,7 +33,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TicketQueue } from '@/components/dashboard/TicketQueue';
+import { Users, UserCheck } from 'lucide-react';
+
+type TicketTypeFilter = 'all' | 'normal' | 'preferential';
 import { CurrentTicket } from '@/components/dashboard/CurrentTicket';
 import { SkipTicketDialog } from '@/components/dashboard/SkipTicketDialog';
 import { StatsCards } from '@/components/dashboard/StatsCards';
@@ -58,6 +62,7 @@ export default function Dashboard() {
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSelectingCounter, setIsSelectingCounter] = useState(false);
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<TicketTypeFilter>('all');
 
   // Get settings and user organs
   const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
@@ -240,8 +245,11 @@ export default function Dashboard() {
     const organIdsToPass = atendimentoAcaoEnabled && userOrgans.length > 0 
       ? userOrgans.map(o => o.id) 
       : undefined;
+
+    // Pass ticket type filter if not "all"
+    const typeToPass = ticketTypeFilter !== 'all' ? ticketTypeFilter : undefined;
     
-    await callNextTicket(counter.id, organIdsToPass);
+    await callNextTicket(counter.id, organIdsToPass, typeToPass);
     // Voice is handled by PublicPanel via realtime
     
     setIsProcessing(false);
@@ -498,7 +506,7 @@ export default function Dashboard() {
                     onClick={handleCallNext}
                     disabled={isProcessing || currentTicket !== null || isCallBlocked}
                   >
-                    {isProcessing ? (
+                    {isProcessing && !isSpeaking ? (
                       <RefreshCw className="h-6 w-6 mr-2 animate-spin" />
                     ) : isCallBlocked ? (
                       <>
@@ -510,6 +518,29 @@ export default function Dashboard() {
                     )}
                     {isCallBlocked ? '' : 'Chamar Próxima Senha'}
                   </Button>
+
+                  {/* Ticket Type Filter */}
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-sm text-muted-foreground">Filtrar por:</span>
+                    <ToggleGroup 
+                      type="single" 
+                      value={ticketTypeFilter} 
+                      onValueChange={(value) => value && setTicketTypeFilter(value as TicketTypeFilter)}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem value="all" aria-label="Todas" className="text-xs px-3">
+                        Todas
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="normal" aria-label="Normal" className="text-xs px-3">
+                        <Users className="h-3 w-3 mr-1" />
+                        Normal
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="preferential" aria-label="Preferencial" className="text-xs px-3">
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        Preferencial
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
 
 
                   {currentTicket && (
