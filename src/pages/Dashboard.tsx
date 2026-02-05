@@ -61,15 +61,24 @@ export default function Dashboard() {
 
   // Get settings and user organs
   const { manualModeEnabled, atendimentoAcaoEnabled } = useManualModeSettings(profile?.unit_id);
-  const { userOrgans } = useOrgans();
+  const { userOrgans, isLoading: organsLoading } = useOrgans();
   
-  // Determine organ filter - only filter if atendimento ação is enabled and user has organs assigned
+  // Determine organ filter - only filter if atendimento ação is enabled
+  // When atendimentoAcaoEnabled is true, we MUST filter by user's organs
   const organFilter = useMemo(() => {
     if (atendimentoAcaoEnabled && userOrgans.length > 0) {
       return userOrgans.map(o => o.id);
     }
-    return undefined;
+    // If atendimentoAcaoEnabled but no organs assigned, return empty array to show no tickets
+    // This prevents showing ALL tickets when user has no organs
+    if (atendimentoAcaoEnabled) {
+      return [];
+    }
+    return undefined; // No filter when not in atendimento ação mode
   }, [atendimentoAcaoEnabled, userOrgans]);
+
+  // Determine if we should fetch tickets - wait for organs to load when in atendimento ação mode
+  const shouldFetchTickets = !atendimentoAcaoEnabled || !organsLoading;
 
   const { 
     tickets, 
@@ -82,7 +91,8 @@ export default function Dashboard() {
   } = useTickets({ 
     status: ['waiting', 'called', 'in_service'],
     organIds: organFilter,
-    realtime: true 
+    realtime: true,
+    enabled: shouldFetchTickets,
   });
 
   const { cooldownRemaining, startCooldown } = useCallCooldown({ duration: 3 }); // Reduced to 3s

@@ -14,10 +14,11 @@ interface UseTicketsOptions {
   organIds?: string[];
   limit?: number;
   realtime?: boolean;
+  enabled?: boolean;
 }
 
 export function useTickets(options: UseTicketsOptions & { organIds?: string[] } = {}) {
-  const { unitId, status, organIds, limit = 50, realtime = true } = options;
+  const { unitId, status, organIds, limit = 50, realtime = true, enabled = true } = options;
   const { profile } = useAuth();
   const { toast } = useToast();
   
@@ -29,12 +30,24 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
   const effectiveUnitId = unitId ?? profile?.unit_id;
 
   const fetchTickets = useCallback(async () => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
     if (!effectiveUnitId) {
       setTickets([]);
       setIsLoading(false);
       return;
     }
-
+    
+    // If organIds is an empty array, don't fetch (no organs assigned)
+    if (organIds && organIds.length === 0) {
+      setTickets([]);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       let query = supabase
         .from('tickets')
@@ -64,7 +77,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, organIds, limit]);
+  }, [effectiveUnitId, status, organIds, limit, enabled]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
@@ -90,7 +103,10 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
 
   // Realtime subscription with broadcast support
   useEffect(() => {
-    if (!realtime || !effectiveUnitId) return;
+    if (!realtime || !effectiveUnitId || !enabled) return;
+    
+    // Don't subscribe if organIds is empty array (no organs assigned)
+    if (organIds && organIds.length === 0) return;
 
     const channel = supabase
       .channel(`tickets-${effectiveUnitId}`, {
@@ -169,7 +185,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
-  }, [realtime, effectiveUnitId, status, fetchTickets]);
+  }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIds]);
 
   const callNextTicket = async (counterId: string, organIdsForCall?: string[]) => {
     if (!effectiveUnitId) {
