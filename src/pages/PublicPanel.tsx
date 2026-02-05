@@ -386,7 +386,7 @@ export default function PublicPanel() {
       supabase.removeChannel(resetChannel);
     };
   }, [user, isPainelUser, unitId, handleNewCall]);
-        }
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
