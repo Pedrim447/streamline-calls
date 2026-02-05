@@ -302,6 +302,34 @@ export default function Dashboard() {
     setIsProcessing(false);
   };
 
+  const handleToggleServiceType = async () => {
+    if (!user?.id || currentTicket) return;
+    
+    setIsChangingServiceType(true);
+    
+    const newType = serviceType === 'normal' ? 'preferential' : 'normal';
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ service_type: newType })
+      .eq('user_id', user.id);
+    
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível alterar o tipo de atendimento.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Tipo alterado',
+        description: `Agora você está atendendo: ${newType === 'preferential' ? 'Preferencial' : 'Normal'}`,
+      });
+      await refreshProfile();
+    }
+    
+    setIsChangingServiceType(false);
+  };
 
   const handleLogout = async () => {
     // Release the counter before logging out
