@@ -195,14 +195,15 @@ export default function Reception() {
         toast.error(`O número da senha ${ticketType === 'preferential' ? 'preferencial' : 'normal'} deve ser maior ou igual a ${effectiveMinNumber}`);
         return;
       }
-      // Validate organ selection if atendimento ação is enabled
-      if (atendimentoAcaoEnabled && !selectedOrganId) {
-        toast.error('Por favor, selecione o órgão de atendimento');
-        return;
-      }
       
       // Removed rule: no longer require ticket number > last generated
       // Now only requires >= minimum configured
+    }
+
+    // Validate organ selection if atendimento ação is enabled (independent of manual mode)
+    if (atendimentoAcaoEnabled && !selectedOrganId) {
+      toast.error('Por favor, selecione o órgão de atendimento');
+      return;
     }
 
     setIsCreating(true);
