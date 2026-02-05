@@ -527,8 +527,8 @@ export default function Reception() {
               </div>
             )}
 
-            {/* Organ Selector - show when atendimento ação is enabled */}
-            {atendimentoAcaoEnabled && (
+            {/* Organ Selector - show when atendimento ação is enabled (in any mode) */}
+            {atendimentoAcaoEnabled && !organsLoading && (
               <div className="space-y-2">
                 <Label htmlFor="organSelect">
                   <span className="flex items-center gap-2">
@@ -536,26 +536,27 @@ export default function Reception() {
                     Órgão de Atendimento *
                   </span>
                 </Label>
-                <Select
-                  value={selectedOrganId}
-                  onValueChange={setSelectedOrganId}
-                  disabled={!callingSystemActive || organsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o órgão" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableOrgans.map((organ) => (
-                      <SelectItem key={organ.id} value={organ.id}>
-                        {organ.code} - {organ.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {availableOrgans.length === 0 && !organsLoading && (
+                {availableOrgans.length === 0 ? (
                   <p className="text-xs text-destructive">
                     Você não possui órgãos vinculados ao seu perfil. Peça ao administrador para vincular.
                   </p>
+                ) : (
+                  <Select
+                    value={selectedOrganId}
+                    onValueChange={setSelectedOrganId}
+                    disabled={!callingSystemActive}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o órgão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableOrgans.map((organ) => (
+                        <SelectItem key={organ.id} value={organ.id}>
+                          {organ.code} - {organ.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             )}
