@@ -527,8 +527,8 @@ export default function Reception() {
               </div>
             )}
 
-            {/* Organ Selector - only show when atendimento ação is enabled */}
-            {manualModeEnabled && atendimentoAcaoEnabled && (
+            {/* Organ Selector - show when atendimento ação is enabled */}
+            {atendimentoAcaoEnabled && (
               <div className="space-y-2">
                 <Label htmlFor="organSelect">
                   <span className="flex items-center gap-2">
