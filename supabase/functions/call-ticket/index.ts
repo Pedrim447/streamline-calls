@@ -11,6 +11,7 @@ interface CallTicketRequest {
   counter_id?: string;
   ticket_id?: string;
   skip_reason?: string;
+  organ_ids?: string[];
 }
 
 Deno.serve(async (req) => {
@@ -58,9 +59,9 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: CallTicketRequest = await req.json();
-    const { action, unit_id, counter_id, ticket_id, skip_reason } = body;
+    const { action, unit_id, counter_id, ticket_id, skip_reason, organ_ids } = body;
 
-    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id);
+    console.log('Action:', action, 'Unit:', unit_id, 'Counter:', counter_id, 'Ticket:', ticket_id, 'Organ IDs:', organ_ids);
 
     if (action === 'call_next') {
       if (!unit_id || !counter_id) {
@@ -71,13 +72,20 @@ Deno.serve(async (req) => {
       }
 
       // Find the next waiting ticket with highest priority
-      const { data: nextTicket, error: findError } = await supabaseAdmin
+      let ticketQuery = supabaseAdmin
         .from('tickets')
         .select('*')
         .eq('unit_id', unit_id)
         .eq('status', 'waiting')
         .order('priority', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      // Filter by organ_ids if provided (attendant can only call tickets from their organs)
+      if (organ_ids && organ_ids.length > 0) {
+        ticketQuery = ticketQuery.in('organ_id', organ_ids);
+      }
+
+      const { data: nextTicket, error: findError } = await ticketQuery
         .limit(1)
         .single();
 
