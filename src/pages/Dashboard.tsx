@@ -547,7 +547,14 @@ export default function Dashboard() {
                   </Button>
 
                   {/* Service Type Indicator */}
-                  <div className="flex items-center justify-center gap-2 p-3 rounded-lg border bg-muted/30">
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 justify-between"
+                    onClick={handleToggleServiceType}
+                    disabled={isChangingServiceType || currentTicket !== null}
+                    title={currentTicket ? 'Finalize o atendimento atual para trocar o tipo' : 'Clique para trocar o tipo de atendimento'}
+                  >
+                    <div className="flex items-center gap-2">
                     {serviceType === 'preferential' ? (
                       <UserCheck className="h-5 w-5 text-primary" />
                     ) : (
@@ -556,7 +563,20 @@ export default function Dashboard() {
                     <span className="font-medium">
                       {serviceType === 'preferential' ? 'Atendimento Preferencial' : 'Atendimento Normal'}
                     </span>
-                  </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      {isChangingServiceType ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : currentTicket ? (
+                        <span className="text-xs">Em atendimento</span>
+                      ) : (
+                        <>
+                          <ArrowLeftRight className="h-4 w-4" />
+                          <span className="text-xs">Trocar</span>
+                        </>
+                      )}
+                    </div>
+                  </Button>
 
 
                   {currentTicket && (
