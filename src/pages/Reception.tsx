@@ -61,8 +61,18 @@ export default function Reception() {
   // Get manual mode settings
   const { manualModeEnabled, manualModeMinNumber, manualModeMinNumberPreferential, callingSystemActive, atendimentoAcaoEnabled, lastGeneratedNormal, lastGeneratedPreferential } = useManualModeSettings(profile?.unit_id);
   
-  // Get organs
-  const { organs, isLoading: organsLoading } = useOrgans();
+  // Get organs - use userOrgans when Atendimento Ação is enabled
+  const { organs: allOrgans, userOrgans, isLoading: organsLoading } = useOrgans();
+  
+  // Filter organs based on user permissions when Atendimento Ação is enabled
+  const availableOrgans = atendimentoAcaoEnabled ? userOrgans : allOrgans;
+  
+  // Auto-select organ if user has only one assigned (when Atendimento Ação is enabled)
+  useEffect(() => {
+    if (atendimentoAcaoEnabled && availableOrgans.length === 1 && !selectedOrganId) {
+      setSelectedOrganId(availableOrgans[0].id);
+    }
+  }, [atendimentoAcaoEnabled, availableOrgans, selectedOrganId]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -535,16 +545,16 @@ export default function Reception() {
                     <SelectValue placeholder="Selecione o órgão" />
                   </SelectTrigger>
                   <SelectContent>
-                    {organs.map((organ) => (
+                    {availableOrgans.map((organ) => (
                       <SelectItem key={organ.id} value={organ.id}>
                         {organ.code} - {organ.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {organs.length === 0 && !organsLoading && (
+                {availableOrgans.length === 0 && !organsLoading && (
                   <p className="text-xs text-destructive">
-                    Nenhum órgão cadastrado. Peça ao administrador para cadastrar.
+                    Você não possui órgãos vinculados ao seu perfil. Peça ao administrador para vincular.
                   </p>
                 )}
               </div>
