@@ -141,13 +141,13 @@ export function CurrentTicket({
             </div>
 
             {/* Cooldown Progress */}
-            {isCooldownActive && (
+            {isBlocked && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Aguarde para chamar novamente</span>
-                  <span>{cooldownRemaining}s</span>
+                  <span>{isSpeaking ? 'Aguarde a voz terminar' : 'Aguarde para repetir'}</span>
+                  <span>{isSpeaking ? '...' : `${repeatCooldownRemaining}s`}</span>
                 </div>
-                <Progress value={(5 - cooldownRemaining) * 20} className="h-2" />
+                <Progress value={isSpeaking ? 50 : ((10 - repeatCooldownRemaining) * 10)} className="h-2" />
               </div>
             )}
 
@@ -156,11 +156,11 @@ export function CurrentTicket({
               <Button 
                 variant="outline" 
                 onClick={onRepeatCall}
-                disabled={isProcessing || isCooldownActive}
+                disabled={isProcessing || isBlocked}
                 className="h-14 text-base"
               >
                 <Volume2 className="h-5 w-5 mr-2" />
-                {isCooldownActive ? `Aguarde ${cooldownRemaining}s` : 'Repetir Chamada'}
+                {isSpeaking ? 'Aguarde...' : (isCooldownActive ? `Aguarde ${repeatCooldownRemaining}s` : 'Repetir Chamada')}
               </Button>
               
               {ticket.status === 'called' ? (
