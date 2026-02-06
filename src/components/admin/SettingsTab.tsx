@@ -295,6 +295,9 @@ export function SettingsTab() {
         onSettingsChange={fetchData}
       />
 
+      {/* Reports */}
+      <ReportsCard />
+
       {/* Priority & Reset Settings */}
       <Card>
         <CardHeader>
