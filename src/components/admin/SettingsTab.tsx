@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Save, Building, Volume2, Clock } from 'lucide-react';
 import { ManualModeSettingsCard } from './ManualModeSettingsCard';
+import { ReportsCard } from './ReportsCard';
 import type { Database } from '@/integrations/supabase/types';
 
 type Unit = Database['public']['Tables']['units']['Row'];
