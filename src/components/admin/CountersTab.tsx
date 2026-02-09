@@ -347,7 +347,7 @@ export function CountersTab() {
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => handleDeleteCounter(counter)}
-                      disabled={!!counter.current_attendant_id}
+                      >
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
