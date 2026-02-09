@@ -145,15 +145,6 @@ export function CountersTab() {
   };
 
   const handleDeleteCounter = async (counter: Counter) => {
-    if (counter.current_attendant_id) {
-      toast({
-        title: 'Erro',
-        description: 'Não é possível excluir um guichê em uso',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const { error } = await supabase
       .from('counters')
       .delete()
@@ -171,6 +162,31 @@ export function CountersTab() {
     toast({
       title: 'Sucesso',
       description: 'Guichê excluído',
+    });
+    
+    fetchCounters();
+  };
+
+  const handleDeleteAll = async () => {
+    if (counters.length === 0) return;
+    
+    const { error } = await supabase
+      .from('counters')
+      .delete()
+      .eq('unit_id', DEFAULT_UNIT_ID);
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao excluir guichês',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Sucesso',
+      description: 'Todos os guichês foram excluídos',
     });
     
     fetchCounters();
