@@ -145,15 +145,6 @@ export function CountersTab() {
   };
 
   const handleDeleteCounter = async (counter: Counter) => {
-    if (counter.current_attendant_id) {
-      toast({
-        title: 'Erro',
-        description: 'Não é possível excluir um guichê em uso',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const { error } = await supabase
       .from('counters')
       .delete()
@@ -171,6 +162,31 @@ export function CountersTab() {
     toast({
       title: 'Sucesso',
       description: 'Guichê excluído',
+    });
+    
+    fetchCounters();
+  };
+
+  const handleDeleteAll = async () => {
+    if (counters.length === 0) return;
+    
+    const { error } = await supabase
+      .from('counters')
+      .delete()
+      .eq('unit_id', DEFAULT_UNIT_ID);
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao excluir guichês',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Sucesso',
+      description: 'Todos os guichês foram excluídos',
     });
     
     fetchCounters();
@@ -215,12 +231,19 @@ export function CountersTab() {
               Configure os guichês de atendimento da unidade
             </CardDescription>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button>
+          <div className="flex gap-2">
+            {counters.length > 0 && (
+              <Button variant="destructive" onClick={handleDeleteAll}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Todos
+              </Button>
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Guichê
               </Button>
@@ -268,7 +291,8 @@ export function CountersTab() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -323,7 +347,6 @@ export function CountersTab() {
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => handleDeleteCounter(counter)}
-                      disabled={!!counter.current_attendant_id}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
