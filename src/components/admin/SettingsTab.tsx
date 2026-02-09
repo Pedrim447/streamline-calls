@@ -296,6 +296,9 @@ export function SettingsTab() {
         onSettingsChange={fetchData}
       />
 
+      {/* Batch Tickets */}
+      <BatchTicketsCard />
+
       {/* Reports */}
       <ReportsCard />
 
