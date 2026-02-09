@@ -231,12 +231,19 @@ export function CountersTab() {
               Configure os guichês de atendimento da unidade
             </CardDescription>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button>
+          <div className="flex gap-2">
+            {counters.length > 0 && (
+              <Button variant="destructive" onClick={handleDeleteAll}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Todos
+              </Button>
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Guichê
               </Button>
