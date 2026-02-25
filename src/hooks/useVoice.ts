@@ -1,13 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  getVoiceQueueState,
-  playAlertSoundGlobal,
-  playSoftChimeGlobal,
-  stopVoiceQueue,
-  subscribeToVoiceQueue,
-  type EnqueueVoiceInput,
-  enqueueVoice,
-} from '@/lib/voiceQueueManager';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface VoiceSettings {
   enabled: boolean;
@@ -35,6 +26,7 @@ function numberToWords(num: number): string {
 
   let result = '';
 
+  // Thousands
   if (num >= 1000) {
     const thousands = Math.floor(num / 1000);
     if (thousands === 1) {
@@ -46,12 +38,14 @@ function numberToWords(num: number): string {
     if (num > 0) result += ' e ';
   }
 
+  // Hundreds
   if (num >= 100) {
     result += hundreds[Math.floor(num / 100)];
     num %= 100;
     if (num > 0) result += ' e ';
   }
 
+  // Tens and units
   if (num >= 20) {
     result += tens[Math.floor(num / 10)];
     num %= 10;
@@ -73,12 +67,12 @@ export interface CallTicketOptions {
 }
 
 export function useVoice(settings: Partial<VoiceSettings> = {}) {
-  const voiceSettings = useMemo(() => ({ ...defaultSettings, ...settings }), [settings]);
+  const voiceSettings = { ...defaultSettings, ...settings };
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(getVoiceQueueState().isSpeaking);
-  const [queueLength, setQueueLength] = useState(getVoiceQueueState().queueLength);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Initialize voices on mount
+  // Initialize voices on mount - needed for some browsers
   useEffect(() => {
     if (!window.speechSynthesis) {
       console.warn('Speech synthesis not supported');
@@ -89,10 +83,14 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         setVoicesLoaded(true);
+        console.log('Voices loaded:', voices.length);
       }
     };
 
+    // Load voices immediately if available
     loadVoices();
+
+    // Also listen for voiceschanged event (needed for Chrome)
     window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
 
     return () => {
@@ -100,132 +98,201 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     };
   }, []);
 
-  useEffect(() => {
-    return subscribeToVoiceQueue((state) => {
-      setIsSpeaking(state.isSpeaking);
-      setQueueLength(state.queueLength);
-    });
-  }, []);
+  const speak = useCallback((
+    ticketCode: string, 
+    counterNumber: number | string, 
+    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
+  ) => {
+    const { isSoft = false, ticketType, clientName, organName } = options;
+    
+    if (!voiceSettings.enabled) {
+      console.log('Voice disabled in settings');
+      return;
+    }
+    
+    if (!window.speechSynthesis) {
+      console.warn('Speech synthesis not available');
+      return;
+    }
 
-  const buildMessage = useCallback((
-    ticketCode: string,
-    counterNumber: number | string,
-    options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
-  ): string | null => {
-    const { ticketType, clientName, organName } = options;
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
 
+    // Parse ticket code (e.g., "P-850" -> type "P", number 850)
     const match = ticketCode.match(/^([A-Z]+)-(\d+)$/);
     if (!match) {
       console.warn('Invalid ticket code format:', ticketCode);
-      return null;
+      return;
     }
 
     const [, ticketPrefix, ticketNumberStr] = match;
     const ticketNumber = parseInt(ticketNumberStr, 10);
     const counterNum = typeof counterNumber === 'string' ? parseInt(counterNumber, 10) : counterNumber;
 
+    // Determine ticket type from parameter or prefix
     let ticketTypeSpoken: string;
     if (ticketType) {
       ticketTypeSpoken = ticketType === 'preferential' ? 'atendimento preferencial' : 'atendimento';
     } else {
       ticketTypeSpoken = ticketPrefix === 'P' ? 'atendimento preferencial' : 'atendimento';
     }
-
+    
     const ticketNumberSpoken = numberToWords(ticketNumber);
     const counterSpoken = numberToWords(counterNum);
 
+    // Build the complete message
     let message = '';
-
+    
+    // If organName is provided (Atendimento Ação mode), use organ-focused message
+    // Otherwise, use client name greeting if available
     if (organName && organName.trim().length > 0) {
+      // Atendimento Ação mode: announce organ instead of client name
       message = `${ticketTypeSpoken} número ${ticketNumberSpoken}, ${organName}, dirija-se ao guichê ${counterSpoken}.`;
     } else {
+      // Normal mode: use client name greeting if available
       if (clientName && clientName.trim().length > 0) {
         const firstName = clientName.trim().split(' ')[0];
         message = `Atenção ${firstName}. `;
       }
+      // Add ticket info with type: "Atendimento número X" or "Atendimento preferencial número X"
       message += `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
     }
 
-    return message;
+    console.log('Speaking:', message);
+
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = voiceSettings.lang;
+    
+    // Softer voice for repeat calls: slower, lower pitch
+    if (isSoft) {
+      utterance.rate = voiceSettings.speed * 0.85; // 15% slower
+      utterance.pitch = 0.9; // Slightly lower pitch
+      utterance.volume = 0.8; // Slightly quieter
+    } else {
+      utterance.rate = voiceSettings.speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+    }
+
+    // Try to find a Portuguese voice
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(v => v.lang.startsWith('pt'));
+    if (ptVoice) {
+      utterance.voice = ptVoice;
+      console.log('Using voice:', ptVoice.name);
+    } else {
+      console.log('No Portuguese voice found, using default');
+    }
+
+    utterance.onstart = () => {
+      console.log('Speech started');
+      setIsSpeaking(true);
+    };
+    utterance.onend = () => {
+      console.log('Speech ended');
+      setIsSpeaking(false);
+    };
+    utterance.onerror = (event) => {
+      console.error('Speech error:', event.error);
+      setIsSpeaking(false);
+    };
+
+    utteranceRef.current = utterance;
+    
+    // Chrome bug workaround: sometimes speech doesn't start without a small delay
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 100);
+  }, [voiceSettings]);
+
+  const stop = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
   }, []);
 
-  const enqueueMessage = useCallback((input: Omit<EnqueueVoiceInput, 'lang' | 'speed'>) => {
-    enqueueVoice({
-      ...input,
-      lang: voiceSettings.lang,
-      speed: voiceSettings.speed,
-    });
-  }, [voiceSettings.lang, voiceSettings.speed]);
-
+  // Original alert sound - more attention-grabbing
   const playAlertSound = useCallback(() => {
-    playAlertSoundGlobal();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 880; // A5 note
+    oscillator.type = 'sine';
+    gainNode.gain.value = 0.3;
+
+    oscillator.start();
+    
+    // Fade out
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    
+    oscillator.stop(audioContext.currentTime + 0.5);
   }, []);
 
+  // Soft chime sound - gentle and calming for repeat calls
   const playSoftChime = useCallback(() => {
-    playSoftChimeGlobal();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // Create a gentle two-note chime
+    const playNote = (frequency: number, startTime: number, duration: number, volume: number) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
+      
+      // Gentle envelope
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime + startTime);
+      gainNode.gain.linearRampToValueAtTime(volume, audioContext.currentTime + startTime + 0.05);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + startTime + duration);
+
+      oscillator.start(audioContext.currentTime + startTime);
+      oscillator.stop(audioContext.currentTime + startTime + duration);
+    };
+
+    // Play soft chime notes (C5 and E5 - pleasant interval)
+    playNote(523.25, 0, 0.6, 0.15);      // C5 - quiet
+    playNote(659.25, 0.15, 0.7, 0.12);   // E5 - even quieter
   }, []);
 
   const callTicket = useCallback((
-    ticketCode: string,
-    counterNumber: number | string,
+    ticketCode: string, 
+    counterNumber: number | string, 
     options: CallTicketOptions = {}
   ) => {
-    if (!voiceSettings.enabled) return;
+    const { withSound = true, ticketType, clientName, organName } = options;
+    
+    if (withSound) {
+      playAlertSound();
+      // Small delay before voice
+      setTimeout(() => {
+        speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
+      }, 600);
+    } else {
+      speak(ticketCode, counterNumber, { isSoft: false, ticketType, clientName, organName });
+    }
+  }, [speak, playAlertSound]);
 
-    const message = buildMessage(ticketCode, counterNumber, {
-      ticketType: options.ticketType,
-      clientName: options.clientName,
-      organName: options.organName,
-    });
-
-    if (!message) return;
-
-    enqueueMessage({
-      message,
-      isSoft: false,
-      withSound: options.withSound !== false,
-    });
-  }, [voiceSettings.enabled, buildMessage, enqueueMessage]);
-
+  // Soft repeat call with gentle chime and calmer voice
   const repeatCallSoft = useCallback((
-    ticketCode: string,
+    ticketCode: string, 
     counterNumber: number | string,
     options: { ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
   ) => {
-    if (!voiceSettings.enabled) return;
-
-    const message = buildMessage(ticketCode, counterNumber, options);
-    if (!message) return;
-
-    enqueueMessage({
-      message,
-      isSoft: true,
-      withSound: true,
-    });
-  }, [voiceSettings.enabled, buildMessage, enqueueMessage]);
-
-  const stop = useCallback(() => {
-    stopVoiceQueue();
-  }, []);
-
-  // Backward compatibility (direct/priority speech): clear queue and speak now
-  const speak = useCallback((
-    ticketCode: string,
-    counterNumber: number | string,
-    options: { isSoft?: boolean; ticketType?: 'normal' | 'preferential'; clientName?: string | null; organName?: string | null } = {}
-  ) => {
-    if (!voiceSettings.enabled) return;
-
-    const message = buildMessage(ticketCode, counterNumber, options);
-    if (!message) return;
-
-    stopVoiceQueue();
-    enqueueMessage({
-      message,
-      isSoft: options.isSoft ?? false,
-      withSound: false,
-    });
-  }, [voiceSettings.enabled, buildMessage, enqueueMessage]);
+    const { ticketType, clientName, organName } = options;
+    
+    playSoftChime();
+    // Small delay before soft voice
+    setTimeout(() => {
+      speak(ticketCode, counterNumber, { isSoft: true, ticketType, clientName, organName });
+    }, 500);
+  }, [speak, playSoftChime]);
 
   return {
     speak,
@@ -236,6 +303,5 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     playSoftChime,
     isSpeaking,
     voicesLoaded,
-    queueLength,
   };
 }
