@@ -12,12 +12,14 @@ import {
   Shield,
   ArrowLeft,
   Tv,
-  Building2
+  Building2,
+  Trophy
 } from 'lucide-react';
 import { AttendantsTab } from '@/components/admin/AttendantsTab';
 import { CountersTab } from '@/components/admin/CountersTab';
 import { SettingsTab } from '@/components/admin/SettingsTab';
 import { OrgansTab } from '@/components/admin/OrgansTab';
+import { RankingTab } from '@/components/admin/RankingTab';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -113,7 +115,7 @@ export default function Admin() {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="attendants" className="gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Atendentes</span>
@@ -125,6 +127,10 @@ export default function Admin() {
             <TabsTrigger value="organs" className="gap-2">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Órgãos</span>
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="gap-2">
+              <Trophy className="h-4 w-4" />
+              <span className="hidden sm:inline">Ranking</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
@@ -142,6 +148,10 @@ export default function Admin() {
 
           <TabsContent value="organs">
             <OrgansTab />
+          </TabsContent>
+
+          <TabsContent value="ranking">
+            <RankingTab />
           </TabsContent>
 
           <TabsContent value="settings">
