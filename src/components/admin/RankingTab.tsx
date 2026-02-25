@@ -136,6 +136,16 @@ export function RankingTab() {
     return copy;
   }, [ranking, period]);
 
+  const totals = useMemo(() => {
+    const totalToday = ranking.reduce((s, e) => s + e.completedToday, 0);
+    const totalMonth = ranking.reduce((s, e) => s + e.completedMonth, 0);
+    const withTime = ranking.filter(e => e.avgMinutes > 0);
+    const avgAll = withTime.length > 0
+      ? Math.round((withTime.reduce((s, e) => s + e.avgMinutes, 0) / withTime.length) * 10) / 10
+      : 0;
+    return { totalToday, totalMonth, avgAll };
+  }, [ranking]);
+
   const getMedalIcon = (index: number) => {
     if (index === 0) return <Trophy className="h-5 w-5 text-yellow-500" />;
     if (index === 1) return <Medal className="h-5 w-5 text-gray-400" />;
@@ -227,6 +237,18 @@ export function RankingTab() {
                   </TableCell>
                 </TableRow>
               ))}
+              <TableRow className="bg-muted/50 font-bold border-t-2">
+                <TableCell></TableCell>
+                <TableCell>Total</TableCell>
+                <TableCell></TableCell>
+                <TableCell className="text-center">{totals.totalToday}</TableCell>
+                <TableCell className="text-center">{totals.totalMonth}</TableCell>
+                <TableCell className="text-center">
+                  {totals.avgAll > 0 ? (
+                    <Badge variant="outline">{totals.avgAll} min</Badge>
+                  ) : '-'}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         )}
