@@ -85,13 +85,7 @@ export default function PublicPanel() {
     console.log('[PublicPanel] Sound enabled by user interaction');
   }, [playAlertSound]);
 
-  // Update clock every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Clock is now in its own PanelClock component (no re-renders here)
 
   // Initial data load - only when authenticated and has unit_id
   useEffect(() => {
