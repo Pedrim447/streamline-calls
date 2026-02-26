@@ -26,7 +26,6 @@ export default function PublicPanel() {
   
   const [currentTicket, setCurrentTicket] = useState<TicketWithCounter | null>(null);
   const [lastCalls, setLastCalls] = useState<TicketWithCounter[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
   const [organs, setOrgans] = useState<Record<string, Organ>>({});
