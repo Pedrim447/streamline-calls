@@ -494,15 +494,7 @@ export default function PublicPanel() {
           )}
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-white/70">
-            <Clock className="h-5 w-5" />
-            <span className="text-2xl font-mono font-bold">
-              {format(currentTime, 'HH:mm:ss')}
-            </span>
-          </div>
-          <span className="text-white/50">
-            {format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </span>
+          <PanelClock />
           <button
             onClick={toggleFullscreen}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
