@@ -598,7 +598,7 @@ export default function PublicPanel() {
         {/* Sidebar - Last Calls */}
         <div className="lg:w-96 bg-black/40 p-6 border-l border-white/10">
           <h2 className="text-xl font-semibold text-white/70 mb-6 flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Últimas Chamadas
           </h2>
           
