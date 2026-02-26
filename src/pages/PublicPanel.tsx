@@ -5,9 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVoice } from '@/hooks/useVoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Maximize, Volume2, VolumeX, Clock, ShieldAlert, Loader2, Building2 } from 'lucide-react';
+import PanelClock from '@/components/panel/PanelClock';
+import { Maximize, Volume2, VolumeX, ShieldAlert, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'];
@@ -25,7 +25,6 @@ export default function PublicPanel() {
   
   const [currentTicket, setCurrentTicket] = useState<TicketWithCounter | null>(null);
   const [lastCalls, setLastCalls] = useState<TicketWithCounter[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [counters, setCounters] = useState<Record<string, Counter>>({});
   const [organs, setOrgans] = useState<Record<string, Organ>>({});
@@ -85,13 +84,7 @@ export default function PublicPanel() {
     console.log('[PublicPanel] Sound enabled by user interaction');
   }, [playAlertSound]);
 
-  // Update clock every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Clock is now in its own PanelClock component (no re-renders here)
 
   // Initial data load - only when authenticated and has unit_id
   useEffect(() => {
@@ -500,15 +493,7 @@ export default function PublicPanel() {
           )}
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-white/70">
-            <Clock className="h-5 w-5" />
-            <span className="text-2xl font-mono font-bold">
-              {format(currentTime, 'HH:mm:ss')}
-            </span>
-          </div>
-          <span className="text-white/50">
-            {format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-          </span>
+          <PanelClock />
           <button
             onClick={toggleFullscreen}
             className="p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -612,7 +597,7 @@ export default function PublicPanel() {
         {/* Sidebar - Last Calls */}
         <div className="lg:w-96 bg-black/40 p-6 border-l border-white/10">
           <h2 className="text-xl font-semibold text-white/70 mb-6 flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Últimas Chamadas
           </h2>
           
