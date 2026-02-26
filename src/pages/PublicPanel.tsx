@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import PanelClock from '@/components/panel/PanelClock';
 import { Maximize, Volume2, VolumeX, ShieldAlert, Loader2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
 
 type Ticket = Database['public']['Tables']['tickets']['Row'];
