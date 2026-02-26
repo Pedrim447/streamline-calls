@@ -125,8 +125,11 @@ export default function Reception() {
 
     fetchTickets();
 
-    // Subscribe to realtime updates with broadcast support
+    // Subscribe to realtime updates — inline state updates (no refetch)
     const unitId = profile?.unit_id || DEFAULT_UNIT_ID;
+    const today = new Date().toISOString().split('T')[0];
+    const todayStart = `${today}T00:00:00`;
+    
     const channel = supabase
       .channel(`reception-${unitId}`, {
         config: {
@@ -141,14 +144,44 @@ export default function Reception() {
           table: 'tickets',
           filter: `unit_id=eq.${unitId}`,
         },
-        () => {
-          console.log('[Reception] Realtime ticket change');
-          fetchTickets();
+        (payload) => {
+          console.log('[Reception] Realtime ticket change:', payload.eventType);
+          
+          if (payload.eventType === 'INSERT') {
+            const newTicket = payload.new as Ticket;
+            // Only add if created today
+            if (newTicket.created_at >= todayStart) {
+              setTickets(prev => {
+                if (prev.some(t => t.id === newTicket.id)) return prev;
+                return [newTicket, ...prev];
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as Ticket;
+            setTickets(prev => {
+              const exists = prev.some(t => t.id === updated.id);
+              if (exists) {
+                return prev.map(t => t.id === updated.id ? updated : t);
+              }
+              // If it's a today ticket that wasn't in our list, add it
+              if (updated.created_at >= todayStart) {
+                return [updated, ...prev];
+              }
+              return prev;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const old = payload.old as Ticket;
+            setTickets(prev => prev.filter(t => t.id !== old.id));
+          }
         }
       )
-      .on('broadcast', { event: 'ticket_called' }, () => {
+      .on('broadcast', { event: 'ticket_called' }, ({ payload }) => {
         console.log('[Reception] Broadcast ticket_called received');
-        fetchTickets();
+        if (payload?.ticket) {
+          setTickets(prev => prev.map(t => 
+            t.id === payload.ticket.id ? { ...t, ...payload.ticket } : t
+          ));
+        }
       })
       .subscribe((status) => {
         console.log('[Reception] Subscription status:', status);
