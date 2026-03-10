@@ -146,8 +146,8 @@ export function useVoice(settings: Partial<VoiceSettings> = {}) {
     // If organName is provided (Atendimento Ação mode), use organ-focused message
     // Otherwise, use client name greeting if available
     if (organName && organName.trim().length > 0) {
-      // Atendimento Ação mode: announce organ instead of client name
-      message = `${ticketTypeSpoken} número ${ticketNumberSpoken}, ${organName}, dirija-se ao guichê ${counterSpoken}.`;
+      // Atendimento Ação mode: skip organ name for faster announcements
+      message = `${ticketTypeSpoken} número ${ticketNumberSpoken}, dirija-se ao guichê ${counterSpoken}.`;
     } else {
       // Normal mode: use client name greeting if available
       if (clientName && clientName.trim().length > 0) {
