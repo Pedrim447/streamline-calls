@@ -91,6 +91,7 @@ export function AttendantsTab() {
   const [formMatricula, setFormMatricula] = useState("");
   const [formServiceType, setFormServiceType] = useState<ServiceType>("normal");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<ProfileWithRoles | null>(null);
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
 
