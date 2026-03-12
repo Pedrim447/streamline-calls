@@ -360,6 +360,42 @@ export function AttendantsTab() {
     setFormServiceType("normal");
   };
 
+  const handleDeleteUser = async (profile: ProfileWithRoles) => {
+    setIsSubmitting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: profile.user_id },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+        },
+      });
+
+      if (response.error || response.data?.error) {
+        toast({
+          title: "Erro",
+          description: response.data?.error || "Falha ao excluir usuário",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Usuário excluído permanentemente",
+        });
+        fetchProfiles();
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir usuário",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setDeleteConfirmProfile(null);
+    }
+  };
+
   const getRoleIcon = (role: AppRole) => {
     switch (role) {
       case "admin":
