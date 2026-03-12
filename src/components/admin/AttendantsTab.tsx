@@ -628,6 +628,16 @@ export function AttendantsTab() {
                         onCheckedChange={() => handleToggleActive(profile)}
                       />
                     </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteConfirmProfile(profile)}
+                      title="Excluir usuário permanentemente"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               );
