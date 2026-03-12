@@ -20,7 +20,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Shield, User, Users, UserCheck, Building2 } from "lucide-react";
+import { UserPlus, Shield, User, Users, UserCheck, Building2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -81,6 +91,7 @@ export function AttendantsTab() {
   const [formMatricula, setFormMatricula] = useState("");
   const [formServiceType, setFormServiceType] = useState<ServiceType>("normal");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmProfile, setDeleteConfirmProfile] = useState<ProfileWithRoles | null>(null);
 
   const unitId = authProfile?.unit_id || DEFAULT_UNIT_ID;
 
@@ -349,6 +360,42 @@ export function AttendantsTab() {
     setFormServiceType("normal");
   };
 
+  const handleDeleteUser = async (profile: ProfileWithRoles) => {
+    setIsSubmitting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: profile.user_id },
+        headers: {
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+        },
+      });
+
+      if (response.error || response.data?.error) {
+        toast({
+          title: "Erro",
+          description: response.data?.error || "Falha ao excluir usuário",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Usuário excluído permanentemente",
+        });
+        fetchProfiles();
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao excluir usuário",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setDeleteConfirmProfile(null);
+    }
+  };
+
   const getRoleIcon = (role: AppRole) => {
     switch (role) {
       case "admin":
@@ -581,6 +628,16 @@ export function AttendantsTab() {
                         onCheckedChange={() => handleToggleActive(profile)}
                       />
                     </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteConfirmProfile(profile)}
+                      title="Excluir usuário permanentemente"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               );
@@ -682,6 +739,28 @@ export function AttendantsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmProfile} onOpenChange={(open) => !open && setDeleteConfirmProfile(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Usuário Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{deleteConfirmProfile?.full_name}</strong> ({deleteConfirmProfile?.email})? 
+              Esta ação não pode ser desfeita. O usuário será removido completamente do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmProfile && handleDeleteUser(deleteConfirmProfile)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Excluindo...' : 'Excluir Permanentemente'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
