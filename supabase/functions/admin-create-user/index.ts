@@ -16,7 +16,6 @@ interface CreateUserRequest {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,32 +24,26 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('No authorization header provided');
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create admin client
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Verify the user's token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !user) {
-      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if user is admin
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -69,7 +62,6 @@ Deno.serve(async (req) => {
 
     console.log('Creating user:', email, 'with role:', role);
 
-    // Validate required inputs
     if (!email || !password || !full_name || !role || !unit_id) {
       return new Response(
         JSON.stringify({ error: 'Email, senha, nome completo, permissão e unidade são obrigatórios' }),
@@ -84,12 +76,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if matricula already exists
+    // Check if matricula already exists (excluding inactive/deleted profiles)
     if (matricula) {
       const { data: existingMatricula } = await supabaseAdmin
         .from('profiles')
-        .select('id')
+        .select('id, is_active')
         .eq('matricula', matricula)
+        .eq('is_active', true)
         .single();
 
       if (existingMatricula) {
@@ -100,47 +93,89 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create the user with admin API
+    let userId: string;
+
+    // Try to create the user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: {
-        full_name,
-      },
+      user_metadata: { full_name },
     });
 
     if (createError) {
-      console.error('Error creating user:', createError);
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // If user already exists in auth, re-activate them
+      if (createError.message.includes('already been registered')) {
+        console.log('User already exists in auth, re-activating:', email);
+        
+        // Find the existing auth user
+        const { data: { users: existingUsers }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (listError) {
+          console.error('Error listing users:', listError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao buscar usuário existente' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const existingUser = existingUsers?.find(u => u.email === email);
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: 'Erro ao localizar usuário existente' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        userId = existingUser.id;
+
+        // Update password and metadata
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          password,
+          email_confirm: true,
+          user_metadata: { full_name },
+        });
+
+        console.log('Re-activated existing auth user:', userId);
+      } else {
+        console.error('Error creating user:', createError);
+        return new Response(
+          JSON.stringify({ error: createError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      userId = newUser.user!.id;
+      console.log('User created:', userId);
     }
 
-    console.log('User created:', newUser.user?.id);
-
-    // Update the profile with additional fields
-    const profileUpdate: Record<string, unknown> = { unit_id };
+    // Upsert profile - update if exists, create handled by trigger
+    const profileUpdate: Record<string, unknown> = { 
+      unit_id, 
+      full_name,
+      is_active: true,
+    };
     if (matricula) profileUpdate.matricula = matricula;
     if (avatar_url) profileUpdate.avatar_url = avatar_url;
 
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update(profileUpdate)
-      .eq('user_id', newUser.user!.id);
+      .eq('user_id', userId);
 
     if (profileError) {
       console.error('Error updating profile:', profileError);
     }
 
-    // Assign role
+    // Remove old roles and assign new one
+    await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
+
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
-      .insert({
-        user_id: newUser.user!.id,
-        role,
-      });
+      .insert({ user_id: userId, role });
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
@@ -151,10 +186,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        user: { 
-          id: newUser.user!.id, 
-          email: newUser.user!.email 
-        } 
+        user: { id: userId, email } 
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
