@@ -299,12 +299,21 @@ export default function Reception() {
         requestBody.organ_id = selectedOrganId;
       }
       
-      // Call the edge function to create a ticket
-      const { data, error } = await supabase.functions.invoke('create-ticket', {
-        body: requestBody,
+      // Direct fetch call - faster than supabase.functions.invoke (skips SDK overhead)
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-ticket`;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session?.access_token || ''}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(requestBody),
       });
-
-      if (error) throw error;
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao criar senha');
 
       if (data?.error) {
         toast.error(data.error);
