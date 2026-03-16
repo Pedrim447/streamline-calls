@@ -163,10 +163,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get the ticket with counter info
+      // Get the ticket
       const { data: ticket, error: ticketError } = await supabaseAdmin
         .from('tickets')
-        .select('*')
+        .select('id, display_code')
         .eq('id', ticket_id)
         .single();
 
