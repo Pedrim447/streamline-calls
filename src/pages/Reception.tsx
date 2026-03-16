@@ -102,6 +102,20 @@ export default function Reception() {
     }
   }, [user, authLoading, navigate]);
 
+  // Warm-up: pre-heat the create-ticket edge function on page load to eliminate cold start
+  useEffect(() => {
+    const warmUp = async () => {
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-ticket`;
+        await fetch(url, { method: 'OPTIONS' });
+        console.log('[Reception] Edge function warmed up');
+      } catch {
+        // Ignore warm-up errors
+      }
+    };
+    warmUp();
+  }, []);
+
   // Fetch tickets
   useEffect(() => {
     const fetchTickets = async () => {
