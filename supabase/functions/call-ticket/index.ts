@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       // Find the next waiting ticket with highest priority
       let ticketQuery = supabaseAdmin
         .from('tickets')
-        .select('*')
+        .select('id, display_code')
         .eq('unit_id', unit_id)
         .eq('status', 'waiting')
         .order('priority', { ascending: false })
@@ -95,10 +95,18 @@ Deno.serve(async (req) => {
 
       const { data: nextTicket, error: findError } = await ticketQuery
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error finding next ticket:', findError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar próxima senha' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // If no ticket in queue, return message to attendant
-      if (findError || !nextTicket) {
+      if (!nextTicket) {
         console.log('No tickets in queue');
         return new Response(
           JSON.stringify({ 
