@@ -2,7 +2,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 interface CallTicketRequest {
@@ -75,7 +77,7 @@ Deno.serve(async (req) => {
       // Find the next waiting ticket with highest priority
       let ticketQuery = supabaseAdmin
         .from('tickets')
-        .select('*')
+        .select('id, display_code')
         .eq('unit_id', unit_id)
         .eq('status', 'waiting')
         .order('priority', { ascending: false })
@@ -93,10 +95,18 @@ Deno.serve(async (req) => {
 
       const { data: nextTicket, error: findError } = await ticketQuery
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (findError) {
+        console.error('Error finding next ticket:', findError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar próxima senha' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // If no ticket in queue, return message to attendant
-      if (findError || !nextTicket) {
+      if (!nextTicket) {
         console.log('No tickets in queue');
         return new Response(
           JSON.stringify({ 
@@ -153,10 +163,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Get the ticket with counter info
+      // Get the ticket
       const { data: ticket, error: ticketError } = await supabaseAdmin
         .from('tickets')
-        .select('*')
+        .select('id, display_code')
         .eq('id', ticket_id)
         .single();
 
