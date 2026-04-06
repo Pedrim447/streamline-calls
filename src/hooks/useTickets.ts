@@ -27,14 +27,20 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
   const [error, setError] = useState<Error | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
-  // Stabilize organIds reference to prevent useEffect re-runs
+  // Stabilize array references to prevent useEffect re-runs
   const organIdsKey = organIds ? [...organIds].sort().join(',') : '';
+  const statusKey = status ? [...status].sort().join(',') : '';
   const stableOrganIds = useRef<string[]>(organIds || []);
+  const stableStatus = useRef<TicketStatus[] | undefined>(status);
   
-  // Update ref only when the actual values change
+  // Update refs only when the actual values change
   useEffect(() => {
     stableOrganIds.current = organIds || [];
   }, [organIdsKey]);
+  
+  useEffect(() => {
+    stableStatus.current = status;
+  }, [statusKey]);
 
   const effectiveUnitId = unitId ?? profile?.unit_id;
 
