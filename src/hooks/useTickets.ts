@@ -27,14 +27,20 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
   const [error, setError] = useState<Error | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
-  // Stabilize organIds reference to prevent useEffect re-runs
+  // Stabilize array references to prevent useEffect re-runs
   const organIdsKey = organIds ? [...organIds].sort().join(',') : '';
+  const statusKey = status ? [...status].sort().join(',') : '';
   const stableOrganIds = useRef<string[]>(organIds || []);
+  const stableStatus = useRef<TicketStatus[] | undefined>(status);
   
-  // Update ref only when the actual values change
+  // Update refs only when the actual values change
   useEffect(() => {
     stableOrganIds.current = organIds || [];
   }, [organIdsKey]);
+  
+  useEffect(() => {
+    stableStatus.current = status;
+  }, [statusKey]);
 
   const effectiveUnitId = unitId ?? profile?.unit_id;
 
@@ -66,8 +72,8 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
         .order('created_at', { ascending: true })
         .limit(limit);
 
-      if (status && status.length > 0) {
-        query = query.in('status', status);
+      if (stableStatus.current && stableStatus.current.length > 0) {
+        query = query.in('status', stableStatus.current);
       }
 
       // Filter by organ IDs if provided
@@ -86,7 +92,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, organIdsKey, limit, enabled]);
+  }, [effectiveUnitId, statusKey, organIdsKey, limit, enabled]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
@@ -136,13 +142,10 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
           if (payload.eventType === 'INSERT') {
             setTickets(prev => {
               const newTicket = payload.new as Ticket;
-              // Check if already exists (optimistic update)
               if (prev.some(t => t.id === newTicket.id)) return prev;
-              // Check if matches status filter
-              if (status && status.length > 0 && !status.includes(newTicket.status)) {
+              if (stableStatus.current && stableStatus.current.length > 0 && !stableStatus.current.includes(newTicket.status)) {
                 return prev;
               }
-              // Check if matches organ filter (if provided)
               if (stableOrganIds.current.length > 0 && newTicket.organ_id && !stableOrganIds.current.includes(newTicket.organ_id)) {
                 return prev;
               }
@@ -154,15 +157,12 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
           } else if (payload.eventType === 'UPDATE') {
             setTickets(prev => {
               const updatedTicket = payload.new as Ticket;
-              // If status filter exists and ticket no longer matches, remove it
-              if (status && status.length > 0 && !status.includes(updatedTicket.status)) {
+              if (stableStatus.current && stableStatus.current.length > 0 && !stableStatus.current.includes(updatedTicket.status)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
-              // If organ filter exists and ticket no longer matches, remove it
               if (stableOrganIds.current.length > 0 && updatedTicket.organ_id && !stableOrganIds.current.includes(updatedTicket.organ_id)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
-              // Otherwise update it
               return prev.map(t => t.id === updatedTicket.id ? updatedTicket : t);
             });
           } else if (payload.eventType === 'DELETE') {
@@ -202,7 +202,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
-  }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIdsKey]);
+  }, [realtime, effectiveUnitId, statusKey, fetchTickets, enabled, organIdsKey]);
 
   const callNextTicket = async (counterId: string, organIdsForCall?: string[], ticketTypeFilter?: TicketType) => {
     if (!effectiveUnitId) {
