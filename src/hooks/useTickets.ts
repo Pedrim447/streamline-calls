@@ -72,8 +72,8 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
         .order('created_at', { ascending: true })
         .limit(limit);
 
-      if (status && status.length > 0) {
-        query = query.in('status', status);
+      if (stableStatus.current && stableStatus.current.length > 0) {
+        query = query.in('status', stableStatus.current);
       }
 
       // Filter by organ IDs if provided
@@ -92,7 +92,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
     } finally {
       setIsLoading(false);
     }
-  }, [effectiveUnitId, status, organIdsKey, limit, enabled]);
+  }, [effectiveUnitId, statusKey, organIdsKey, limit, enabled]);
 
   // Optimistic update helper
   const optimisticUpdate = useCallback((ticketId: string, updates: Partial<Ticket>) => {
