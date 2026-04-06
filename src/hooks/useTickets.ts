@@ -202,7 +202,7 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
       supabase.removeChannel(resetChannel);
       channelRef.current = null;
     };
-  }, [realtime, effectiveUnitId, status, fetchTickets, enabled, organIdsKey]);
+  }, [realtime, effectiveUnitId, statusKey, fetchTickets, enabled, organIdsKey]);
 
   const callNextTicket = async (counterId: string, organIdsForCall?: string[], ticketTypeFilter?: TicketType) => {
     if (!effectiveUnitId) {
