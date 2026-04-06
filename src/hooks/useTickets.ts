@@ -142,13 +142,10 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
           if (payload.eventType === 'INSERT') {
             setTickets(prev => {
               const newTicket = payload.new as Ticket;
-              // Check if already exists (optimistic update)
               if (prev.some(t => t.id === newTicket.id)) return prev;
-              // Check if matches status filter
-              if (status && status.length > 0 && !status.includes(newTicket.status)) {
+              if (stableStatus.current && stableStatus.current.length > 0 && !stableStatus.current.includes(newTicket.status)) {
                 return prev;
               }
-              // Check if matches organ filter (if provided)
               if (stableOrganIds.current.length > 0 && newTicket.organ_id && !stableOrganIds.current.includes(newTicket.organ_id)) {
                 return prev;
               }
@@ -160,15 +157,12 @@ export function useTickets(options: UseTicketsOptions & { organIds?: string[] } 
           } else if (payload.eventType === 'UPDATE') {
             setTickets(prev => {
               const updatedTicket = payload.new as Ticket;
-              // If status filter exists and ticket no longer matches, remove it
-              if (status && status.length > 0 && !status.includes(updatedTicket.status)) {
+              if (stableStatus.current && stableStatus.current.length > 0 && !stableStatus.current.includes(updatedTicket.status)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
-              // If organ filter exists and ticket no longer matches, remove it
               if (stableOrganIds.current.length > 0 && updatedTicket.organ_id && !stableOrganIds.current.includes(updatedTicket.organ_id)) {
                 return prev.filter(t => t.id !== updatedTicket.id);
               }
-              // Otherwise update it
               return prev.map(t => t.id === updatedTicket.id ? updatedTicket : t);
             });
           } else if (payload.eventType === 'DELETE') {
