@@ -441,6 +441,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_next_ticket: {
+        Args: {
+          _attendant_id: string
+          _counter_id: string
+          _organ_ids?: string[]
+          _ticket_type?: string
+          _unit_id: string
+        }
+        Returns: Json
+      }
       get_user_unit_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
