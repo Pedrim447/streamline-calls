@@ -12,10 +12,9 @@ interface Profile {
   unit_id: string | null;
   full_name: string;
   email: string;
-  avatar_url: string | null;
   is_active: boolean;
-  current_session_id: string | null;
   service_type: ServiceType | null;
+  matricula: string | null;
 }
 
 interface AuthContextType {
