@@ -130,14 +130,11 @@ export type Database = {
       }
       profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string
-          current_session_id: string | null
           email: string
           full_name: string
           id: string
           is_active: boolean | null
-          last_login_at: string | null
           matricula: string | null
           service_type: Database["public"]["Enums"]["service_type"] | null
           unit_id: string | null
@@ -145,14 +142,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
-          current_session_id?: string | null
           email: string
           full_name: string
           id?: string
           is_active?: boolean | null
-          last_login_at?: string | null
           matricula?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           unit_id?: string | null
@@ -160,14 +154,11 @@ export type Database = {
           user_id: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
-          current_session_id?: string | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean | null
-          last_login_at?: string | null
           matricula?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           unit_id?: string | null
@@ -191,11 +182,9 @@ export type Database = {
           calling_system_active: boolean | null
           created_at: string
           id: string
-          lock_timeout_seconds: number | null
           manual_mode_enabled: boolean | null
           manual_mode_min_number: number | null
           manual_mode_min_number_preferential: number | null
-          max_retry_attempts: number | null
           normal_priority: number | null
           per_organ_numbers_enabled: boolean | null
           preferential_priority: number | null
@@ -209,11 +198,9 @@ export type Database = {
           calling_system_active?: boolean | null
           created_at?: string
           id?: string
-          lock_timeout_seconds?: number | null
           manual_mode_enabled?: boolean | null
           manual_mode_min_number?: number | null
           manual_mode_min_number_preferential?: number | null
-          max_retry_attempts?: number | null
           normal_priority?: number | null
           per_organ_numbers_enabled?: boolean | null
           preferential_priority?: number | null
@@ -227,11 +214,9 @@ export type Database = {
           calling_system_active?: boolean | null
           created_at?: string
           id?: string
-          lock_timeout_seconds?: number | null
           manual_mode_enabled?: boolean | null
           manual_mode_min_number?: number | null
           manual_mode_min_number_preferential?: number | null
-          max_retry_attempts?: number | null
           normal_priority?: number | null
           per_organ_numbers_enabled?: boolean | null
           preferential_priority?: number | null
@@ -301,7 +286,6 @@ export type Database = {
         Row: {
           attendant_id: string | null
           called_at: string | null
-          cancel_reason: string | null
           client_name: string | null
           completed_at: string | null
           completion_status: string | null
@@ -325,7 +309,6 @@ export type Database = {
         Insert: {
           attendant_id?: string | null
           called_at?: string | null
-          cancel_reason?: string | null
           client_name?: string | null
           completed_at?: string | null
           completion_status?: string | null
@@ -349,7 +332,6 @@ export type Database = {
         Update: {
           attendant_id?: string | null
           called_at?: string | null
-          cancel_reason?: string | null
           client_name?: string | null
           completed_at?: string | null
           completion_status?: string | null
